@@ -1,16 +1,20 @@
 "use client";
 
 import { Container, Grid, Typography, Box, Paper, Button } from '@mui/material';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinanceProfile } from '@/contexts/FinanceProfileContext';
 import BalanceCard from '../../components/features/Dashboard/BalanceCard';
 import QuickActions from '../../components/features/Dashboard/QuickActions';
+import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
+import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const { profile } = useFinanceProfile();
   const router = useRouter();
+  const [showFinanceSetup, setShowFinanceSetup] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -21,16 +25,39 @@ export default function DashboardPage() {
     }
   };
 
+  const handleFinanceSetupComplete = () => {
+    setShowFinanceSetup(false);
+  };
+
+  if (showFinanceSetup) {
+    return (
+      <FinanceSetupForm 
+        onComplete={handleFinanceSetupComplete}
+        onSkip={handleFinanceSetupComplete}
+      />
+    );
+  }
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Dashboard Financiero
-        </Typography>
-        <Button variant="outlined" onClick={handleLogout}>
-          Cerrar Sesión
-        </Button>
-      </Box>
+    <AuthGuard requireAuth={true} requireFinanceSetup={true}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            Dashboard Financiero
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setShowFinanceSetup(true)}
+              color="primary"
+            >
+              Reconfigurar Presupuesto
+            </Button>
+            <Button variant="outlined" onClick={handleLogout}>
+              Cerrar Sesión
+            </Button>
+          </Box>
+        </Box>
 
       {user && (
         <Typography variant="h6" sx={{ mb: 2 }}>
@@ -83,5 +110,6 @@ export default function DashboardPage() {
         </Grid>
       </Grid>
     </Container>
+    </AuthGuard>
   );
 }

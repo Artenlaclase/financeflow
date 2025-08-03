@@ -19,17 +19,19 @@ interface FinanceSetupFormProps {
 }
 
 export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFormProps) {
-  const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
+  const { profile, createProfile, updateProfile, loading } = useFinanceProfile();
+  const [monthlyIncome, setMonthlyIncome] = useState<number>(profile?.monthlyIncome || 0);
   const [fixedExpenses, setFixedExpenses] = useState({
-    housing: 0,
-    phone: 0,
-    internet: 0,
-    creditCards: 0,
-    loans: 0,
-    insurance: 0
+    housing: profile?.fixedExpenses.housing || 0,
+    phone: profile?.fixedExpenses.phone || 0,
+    internet: profile?.fixedExpenses.internet || 0,
+    creditCards: profile?.fixedExpenses.creditCards || 0,
+    loans: profile?.fixedExpenses.loans || 0,
+    insurance: profile?.fixedExpenses.insurance || 0
   });
   const [error, setError] = useState('');
-  const { createProfile, loading } = useFinanceProfile();
+
+  const isUpdate = !!profile;
 
   const handleExpenseChange = (field: keyof typeof fixedExpenses, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -52,10 +54,17 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
     }
 
     try {
-      await createProfile({
-        monthlyIncome,
-        fixedExpenses
-      });
+      if (isUpdate) {
+        await updateProfile({
+          monthlyIncome,
+          fixedExpenses
+        });
+      } else {
+        await createProfile({
+          monthlyIncome,
+          fixedExpenses
+        });
+      }
       onComplete();
     } catch (err: any) {
       setError(err.message || 'Error al guardar el perfil financiero');
@@ -65,12 +74,14 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
       <Typography variant="h4" gutterBottom align="center">
-        Configuración Inicial del Presupuesto
+        {isUpdate ? 'Actualizar Presupuesto' : 'Configuración Inicial del Presupuesto'}
       </Typography>
       
       <Typography variant="body1" color="text.secondary" paragraph align="center">
-        Para comenzar, necesitamos conocer tu situación financiera básica. 
-        Esto nos ayudará a crear un presupuesto personalizado para ti.
+        {isUpdate 
+          ? 'Actualiza tu información financiera para mantener tu presupuesto al día.'
+          : 'Para comenzar, necesitamos conocer tu situación financiera básica. Esto nos ayudará a crear un presupuesto personalizado para ti.'
+        }
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
@@ -247,7 +258,7 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
           disabled={loading}
           sx={{ ml: 'auto' }}
         >
-          {loading ? 'Guardando...' : 'Guardar y Continuar'}
+          {loading ? 'Guardando...' : (isUpdate ? 'Actualizar Presupuesto' : 'Guardar y Continuar')}
         </Button>
       </Box>
     </Box>
