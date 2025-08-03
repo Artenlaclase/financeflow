@@ -10,6 +10,7 @@ import RecentTransactions from '../../components/features/Dashboard/RecentTransa
 import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import { useRouter } from 'next/navigation';
+import { Analytics } from '@mui/icons-material';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -47,6 +48,14 @@ export default function DashboardPage() {
             Dashboard Financiero
           </Typography>
           <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant="contained" 
+              startIcon={<Analytics />}
+              onClick={() => router.push('/analytics')}
+              color="secondary"
+            >
+              Ver Análisis
+            </Button>
             <Button 
               variant="outlined" 
               onClick={() => setShowFinanceSetup(true)}
