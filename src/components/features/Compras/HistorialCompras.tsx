@@ -68,7 +68,12 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    console.log('Setting up compras listener for user:', user.uid);
 
     const q = query(
       collection(db, 'transactions'),
@@ -78,22 +83,38 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
       orderBy('date', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const comprasData: CompraTransaction[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (data.detalleCompra) {
-          comprasData.push({
-            id: doc.id,
-            ...data
-          } as CompraTransaction);
-        }
-      });
-      setCompras(comprasData);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        console.log('Compras query result:', querySnapshot.size, 'documents');
+        const comprasData: CompraTransaction[] = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.detalleCompra) {
+            comprasData.push({
+              id: doc.id,
+              ...data
+            } as CompraTransaction);
+          }
+        });
+        setCompras(comprasData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching compras:', error);
+        setLoading(false);
+      }
+    );
 
-    return () => unsubscribe();
+    // Timeout de seguridad en caso de que Firestore no responda
+    const timeout = setTimeout(() => {
+      console.log('Firestore timeout - stopping loading');
+      setLoading(false);
+    }, 5000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [user, refreshTrigger]);
 
   const toggleExpanded = (compraId: string) => {
@@ -137,10 +158,13 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
 
   if (loading) {
     return (
-      <Paper sx={{ p: 3, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="body1" sx={{ mt: 2 }}>
+      <Paper sx={{ p: 4, textAlign: 'center' }}>
+        <CircularProgress size={60} />
+        <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
           Cargando historial de compras...
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Esto puede tomar unos segundos
         </Typography>
       </Paper>
     );
@@ -210,9 +234,24 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
           Historial de Compras ({compras.length})
         </Typography>
 
-        {compras.length === 0 ? (
-          <Alert severity="info">
-            No hay compras registradas aún. ¡Registra tu primera compra de supermercado!
+        {compras.length === 0 && !loading ? (
+          <Alert 
+            severity="info" 
+            sx={{ 
+              textAlign: 'center', 
+              py: 4,
+              '& .MuiAlert-message': { width: '100%' }
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              🛒 ¡Aún no hay compras registradas!
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Comienza a registrar tus compras de supermercado para llevar un mejor control de tus gastos.
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Tip: Usa el botón "Nueva Compra" para agregar tu primera compra
+            </Typography>
           </Alert>
         ) : (
           <Box sx={{ maxHeight: 600, overflow: 'auto' }}>

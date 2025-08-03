@@ -47,18 +47,28 @@ interface ProductoCompra {
 }
 
 const comunasChile = [
-  'Ñuñoa', 'Las Condes', 'Providencia', 'Santiago', 'La Reina', 'Vitacura',
-  'Maipú', 'La Florida', 'Puente Alto', 'San Bernardo', 'Quilicura',
-  'Peñalolén', 'Macul', 'San Miguel', 'Independencia', 'Recoleta',
-  'Conchalí', 'Huechuraba', 'Renca', 'Cerro Navia', 'Lo Prado',
-  'Quinta Normal', 'Estación Central', 'Pedro Aguirre Cerda', 'Lo Espejo',
-  'El Bosque', 'San Ramón', 'La Cisterna', 'La Granja', 'San Joaquín',
-  'La Pintana', 'El Bosque'
-];
+  // Región Metropolitana
+  'Cerro Navia', 'Conchalí', 'El Bosque', 'Estación Central', 'Huechuraba', 
+  'Independencia', 'La Cisterna', 'La Florida', 'La Granja', 'La Pintana', 
+  'La Reina', 'Las Condes', 'Lo Espejo', 'Lo Prado', 'Macul', 'Maipú', 
+  'Melipilla', 'Ñuñoa', 'Padre Hurtado', 'Pedro Aguirre Cerda', 'Peñaflor', 
+  'Peñalolén', 'Providencia', 'Puente Alto', 'Quilicura', 'Quinta Normal', 
+  'Recoleta', 'Renca', 'San Bernardo', 'San Joaquín', 'San Miguel', 
+  'San Ramón', 'Santiago', 'Talagante', 'Vitacura',
+  
+  // VI Región - Libertador General Bernardo O'Higgins (alfabético)
+  'Chépica', 'Chimbarongo', 'Codegua', 'Coinco', 'Coltauco', 'Doñihue',
+  'Graneros', 'La Estrella', 'Las Cabras', 'Litueche', 'Lolol', 'Machalí',
+  'Malloa', 'Marchihue', 'Mostazal', 'Nancagua', 'Navidad', 'Olivar',
+  'Palmilla', 'Paredones', 'Peralillo', 'Peumo', 'Pichidegua', 'Pichilemu',
+  'Placilla', 'Pumanque', 'Quinta de Tilcoco', 'Rancagua', 'Rengo',
+  'Requínoa', 'San Fernando', 'San Vicente', 'Santa Cruz'
+].sort();
 
 const supermercados = [
   'Jumbo', 'Lider', 'Santa Isabel', 'Tottus', 'Unimarc', 'Ekono',
-  'Express de Lider', 'Acuenta', 'OK Market', 'Montserrat', 'Otro'
+  'Express de Lider', 'Acuenta', 'OK Market', 'Montserrat', 
+  'La Foresta', 'San Roberto', 'Otro'
 ];
 
 export default function ComprasMercadoForm({ open, onClose, onComplete }: ComprasMercadoFormProps) {
