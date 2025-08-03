@@ -30,6 +30,8 @@ export default function RecentTransactions() {
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -106,58 +108,60 @@ export default function RecentTransactions() {
 
   const handleEdit = () => {
     console.log('handleEdit called with transaction:', selectedTransaction);
-    setEditDialogOpen(true);
-    handleMenuClose();
+    if (selectedTransaction) {
+      setTransactionToEdit(selectedTransaction);
+      setEditDialogOpen(true);
+    }
   };
 
   const handleDeleteClick = () => {
     console.log('handleDeleteClick called with transaction:', selectedTransaction);
-    setDeleteDialogOpen(true);
-    handleMenuClose();
+    if (selectedTransaction) {
+      setTransactionToDelete(selectedTransaction);
+      setDeleteDialogOpen(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {
     console.log('handleDeleteConfirm called');
     console.log('User:', user);
-    console.log('Selected transaction:', selectedTransaction);
-    
+    console.log('Transaction to delete:', transactionToDelete);
+
     if (!user) {
       console.error('No user authenticated');
       setError('Error: Usuario no autenticado');
       return;
     }
 
-    if (!selectedTransaction) {
-      console.error('No transaction selected');
-      setError('Error: No se ha seleccionado ninguna transacción');
+    if (!transactionToDelete) {
+      console.error('No transaction selected for deletion');
+      setError('Error: No se ha seleccionado ninguna transacción para eliminar');
       return;
     }
 
-    if (!selectedTransaction.id) {
-      console.error('Transaction has no ID:', selectedTransaction);
+    if (!transactionToDelete.id) {
+      console.error('Transaction has no ID:', transactionToDelete);
       setError('Error: La transacción no tiene un ID válido');
       return;
     }
 
-    if (!selectedTransaction.type || (selectedTransaction.type !== 'income' && selectedTransaction.type !== 'expense')) {
-      console.error('Invalid transaction type:', selectedTransaction.type);
+    if (!transactionToDelete.type || (transactionToDelete.type !== 'income' && transactionToDelete.type !== 'expense')) {
+      console.error('Invalid transaction type:', transactionToDelete.type);
       setError('Error: Tipo de transacción no válido');
       return;
-    }
-    
-    setLoading(true);
+    }    setLoading(true);
     setError(null);
     
     try {
       console.log('Attempting to delete transaction:', {
         userId: user.uid,
-        transactionId: selectedTransaction.id,
-        type: selectedTransaction.type,
-        amount: selectedTransaction.amount,
-        description: selectedTransaction.description
+        transactionId: transactionToDelete.id,
+        type: transactionToDelete.type,
+        amount: transactionToDelete.amount,
+        description: transactionToDelete.description
       });
       
-      await deleteTransaction(user.uid, selectedTransaction.id, selectedTransaction.type);
+      await deleteTransaction(user.uid, transactionToDelete.id, transactionToDelete.type);
       
       console.log('Transaction deleted successfully');
       
@@ -165,10 +169,11 @@ export default function RecentTransactions() {
       // No necesitamos llamar refreshData() manualmente
       
       // Mostrar mensaje de éxito
-      setSuccess(`${selectedTransaction.type === 'income' ? 'Ingreso' : 'Gasto'} eliminado correctamente`);
+      setSuccess(`${transactionToDelete.type === 'income' ? 'Ingreso' : 'Gasto'} eliminado correctamente`);
       
       // Limpiar estados
       setDeleteDialogOpen(false);
+      setTransactionToDelete(null);
       setSelectedTransaction(null);
       
     } catch (error) {
@@ -182,12 +187,14 @@ export default function RecentTransactions() {
 
   const handleDeleteCancel = () => {
     setDeleteDialogOpen(false);
+    setTransactionToDelete(null);
     setSelectedTransaction(null);
     setError(null);
   };
 
   const handleEditClose = () => {
     setEditDialogOpen(false);
+    setTransactionToEdit(null);
     setSelectedTransaction(null);
     setError(null);
   };
@@ -333,17 +340,26 @@ export default function RecentTransactions() {
           handleMenuClose();
         }}
       >
-        <MenuItem onClick={() => {
-          console.log('Edit MenuItem clicked');
-          handleEdit();
-        }}>
+        <MenuItem 
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log('Edit MenuItem clicked');
+            handleEdit();
+            handleMenuClose();
+          }}
+        >
           <Edit fontSize="small" sx={{ mr: 1 }} />
           Editar
         </MenuItem>
-        <MenuItem onClick={() => {
-          console.log('Delete MenuItem clicked');
-          handleDeleteClick();
-        }} sx={{ color: 'error.main' }}>
+        <MenuItem 
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log('Delete MenuItem clicked');
+            handleDeleteClick();
+            handleMenuClose();
+          }} 
+          sx={{ color: 'error.main' }}
+        >
           <Delete fontSize="small" sx={{ mr: 1 }} />
           Eliminar
         </MenuItem>
@@ -370,7 +386,7 @@ Monto: $${(selectedTransaction.amount || 0).toLocaleString()}`
       {/* Diálogo de edición */}
       <EditTransactionDialog
         open={editDialogOpen}
-        transaction={selectedTransaction}
+        transaction={transactionToEdit}
         onClose={handleEditClose}
       />
 
