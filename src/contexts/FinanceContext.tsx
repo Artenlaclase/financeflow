@@ -20,7 +20,6 @@ interface FinanceContextProps {
   expenses: number;
   debts: any[];
   recentTransactions: Transaction[];
-  refreshData: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextProps>({
@@ -28,8 +27,7 @@ const FinanceContext = createContext<FinanceContextProps>({
   income: 0,
   expenses: 0,
   debts: [],
-  recentTransactions: [],
-  refreshData: () => {}
+  recentTransactions: []
 });
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
@@ -40,8 +38,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [debts, setDebts] = useState<any[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
 
-  const refreshData = () => {
-    if (!user) return;
+  const setupListeners = () => {
+    if (!user) {
+      console.log('No user found, skipping listeners setup');
+      return;
+    }
+
+    console.log('Setting up Firestore listeners for user:', user.uid);
 
     // Obtener ingresos
     const incomeQuery = query(
@@ -137,7 +140,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = refreshData();
+    const unsubscribe = setupListeners();
     return () => {
       if (unsubscribe) unsubscribe();
     };
@@ -150,7 +153,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [income, expenses]);
 
   return (
-    <FinanceContext.Provider value={{ balance, income, expenses, debts, recentTransactions, refreshData }}>
+    <FinanceContext.Provider value={{ balance, income, expenses, debts, recentTransactions }}>
       {children}
     </FinanceContext.Provider>
   );

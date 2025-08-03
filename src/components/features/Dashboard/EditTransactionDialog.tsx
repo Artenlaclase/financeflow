@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import { Transaction, updateTransaction } from '../../../lib/firebaseUtils';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useFinance } from '../../../contexts/FinanceContext';
 
 interface EditTransactionDialogProps {
   open: boolean;
@@ -59,7 +58,6 @@ export default function EditTransactionDialog({
   const [error, setError] = useState('');
 
   const { user } = useAuth();
-  const { refreshData } = useFinance();
 
   useEffect(() => {
     if (transaction) {
@@ -102,7 +100,7 @@ export default function EditTransactionDialog({
         date: new Date(date)
       });
 
-      refreshData();
+      // Los listeners de Firestore actualizarán automáticamente los datos
       onClose();
     } catch (err: any) {
       setError(err.message || 'Error al actualizar la transacción');

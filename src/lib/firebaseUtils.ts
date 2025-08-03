@@ -19,7 +19,10 @@ export const updateTransaction = async (
   updateData: Partial<Transaction>
 ): Promise<void> => {
   try {
+    // Importante: 'income' collection name es 'income', 'expense' collection name es 'expenses'
     const collectionName = type === 'income' ? 'income' : 'expenses';
+    console.log('Updating in collection:', collectionName, 'Document ID:', transactionId);
+    
     const docRef = doc(db, 'users', userId, collectionName, transactionId);
     
     const dataToUpdate = {
@@ -32,6 +35,7 @@ export const updateTransaction = async (
     delete dataToUpdate.type;
     
     await updateDoc(docRef, dataToUpdate);
+    console.log('Transaction updated successfully:', transactionId);
   } catch (error) {
     console.error('Error updating transaction:', error);
     throw new Error('Error al actualizar la transacción');
@@ -48,7 +52,10 @@ export const deleteTransaction = async (
   }
 
   try {
+    // Importante: 'income' collection name es 'income', 'expense' collection name es 'expenses' 
     const collectionName = type === 'income' ? 'income' : 'expenses';
+    console.log('Deleting from collection:', collectionName, 'Document ID:', transactionId);
+    
     const docRef = doc(db, 'users', userId, collectionName, transactionId);
     await deleteDoc(docRef);
     console.log('Transaction deleted successfully:', transactionId);

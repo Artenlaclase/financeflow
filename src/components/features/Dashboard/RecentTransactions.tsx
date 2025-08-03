@@ -14,7 +14,8 @@ import {
   Menu,
   MenuItem,
   Alert,
-  Snackbar
+  Snackbar,
+  Button
 } from '@mui/material';
 import { MoreVert, Edit, Delete } from '@mui/icons-material';
 import { useFinance } from '../../../contexts/FinanceContext';
@@ -24,7 +25,7 @@ import ConfirmationDialog from '../../shared/ConfirmationDialog';
 import EditTransactionDialog from './EditTransactionDialog';
 
 export default function RecentTransactions() {
-  const { recentTransactions, refreshData } = useFinance();
+  const { recentTransactions } = useFinance();
   const { user } = useAuth();
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -37,6 +38,20 @@ export default function RecentTransactions() {
 
   // Debug log para ver las transacciones
   console.log('RecentTransactions - Current transactions:', recentTransactions);
+  console.log('RecentTransactions - User:', user);
+
+  if (!user) {
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Transacciones Recientes
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Usuario no autenticado
+        </Typography>
+      </Paper>
+    );
+  }
 
   if (!recentTransactions || recentTransactions.length === 0) {
     return (
@@ -124,8 +139,8 @@ export default function RecentTransactions() {
       
       await deleteTransaction(user.uid, selectedTransaction.id, selectedTransaction.type);
       
-      // Actualizar datos
-      refreshData();
+      // Los listeners de Firestore actualizarán automáticamente los datos
+      // No necesitamos llamar refreshData() manualmente
       
       // Mostrar mensaje de éxito
       setSuccess(`${selectedTransaction.type === 'income' ? 'Ingreso' : 'Gasto'} eliminado correctamente`);
@@ -155,6 +170,29 @@ export default function RecentTransactions() {
     setError(null);
   };
 
+  const handleTestTransaction = async () => {
+    if (!user) return;
+    
+    try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      const { db } = await import('../../../lib/firebase/config');
+      
+      await addDoc(collection(db, 'users', user.uid, 'expenses'), {
+        amount: 10.50,
+        category: 'Test',
+        description: 'Transacción de prueba',
+        date: new Date(),
+        createdAt: new Date()
+      });
+      
+      console.log('Test transaction added');
+      setSuccess('Transacción de prueba agregada');
+    } catch (error) {
+      console.error('Error adding test transaction:', error);
+      setError('Error al agregar transacción de prueba');
+    }
+  };
+
   const handleCloseSnackbar = () => {
     setError(null);
     setSuccess(null);
@@ -162,15 +200,31 @@ export default function RecentTransactions() {
 
   return (
     <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Transacciones Recientes
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6">
+          Transacciones Recientes
+        </Typography>
+        {process.env.NODE_ENV === 'development' && (
+          <Button 
+            variant="outlined" 
+            size="small" 
+            onClick={handleTestTransaction}
+            disabled={loading}
+          >
+            + Test
+          </Button>
+        )}
+      </Box>
       
       {/* Debug: Mostrar información de las transacciones */}
       {process.env.NODE_ENV === 'development' && (
         <Box sx={{ mb: 2, p: 1, bgcolor: 'grey.100', fontSize: '0.8rem' }}>
           <Typography variant="caption">
             Debug: {recentTransactions.length} transacciones cargadas
+          </Typography>
+          <br />
+          <Typography variant="caption">
+            Usuario: {user?.email || 'No autenticado'}
           </Typography>
         </Box>
       )}
