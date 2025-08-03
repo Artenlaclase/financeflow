@@ -71,10 +71,17 @@ const supermercados = [
   'La Foresta', 'San Roberto', 'Otro'
 ];
 
+const metodosPago = [
+  { value: 'efectivo', label: 'Efectivo 💵', icon: '💵' },
+  { value: 'debito', label: 'Débito 💳', icon: '💳' },
+  { value: 'credito', label: 'Crédito 💳', icon: '💳' }
+];
+
 export default function ComprasMercadoForm({ open, onClose, onComplete }: ComprasMercadoFormProps) {
   const [supermercado, setSupermercado] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [metodoPago, setMetodoPago] = useState('');
   const [productos, setProductos] = useState<ProductoCompra[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -96,7 +103,8 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     if (nuevoProducto.porPeso) {
       const precioKilo = parseFloat(nuevoProducto.precioKilo) || 0;
       const peso = parseFloat(nuevoProducto.peso) || 0;
-      return precioKilo * peso;
+      const total = precioKilo * peso;
+      return Math.round(total); // Redondear al peso más cercano
     } else {
       const precio = parseFloat(nuevoProducto.precio) || 0;
       const cantidad = parseFloat(nuevoProducto.cantidad) || 0;
@@ -156,7 +164,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!supermercado || !ubicacion || productos.length === 0) {
+    if (!supermercado || !ubicacion || !metodoPago || productos.length === 0) {
       setError('Completa todos los campos requeridos y agrega al menos un producto');
       return;
     }
@@ -169,12 +177,13 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         type: 'expense',
         category: 'Supermercado',
         amount: calcularTotalCompra(),
-        description: `Compra en ${supermercado} - ${ubicacion}`,
+        description: `Compra en ${supermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
         date: new Date(fecha),
         userId: user?.uid,
         detalleCompra: {
           supermercado,
           ubicacion,
+          metodoPago,
           productos,
           totalProductos: productos.length,
           totalCompra: calcularTotalCompra()
@@ -190,6 +199,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       setSupermercado('');
       setUbicacion('');
       setFecha(new Date().toISOString().split('T')[0]);
+      setMetodoPago('');
       setProductos([]);
       setNuevoProducto({
         nombre: '',
@@ -230,7 +240,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
             </Typography>
             
             <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <FormControl fullWidth required>
                   <InputLabel>Supermercado</InputLabel>
                   <Select
@@ -247,7 +257,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <FormControl fullWidth required>
                   <InputLabel>Comuna</InputLabel>
                   <Select
@@ -264,7 +274,24 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                 </FormControl>
               </Grid>
 
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth required>
+                  <InputLabel>Método de Pago</InputLabel>
+                  <Select
+                    value={metodoPago}
+                    onChange={(e) => setMetodoPago(e.target.value)}
+                    label="Método de Pago"
+                  >
+                    {metodosPago.map((metodo) => (
+                      <MenuItem key={metodo.value} value={metodo.value}>
+                        {metodo.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={3}>
                 <TextField
                   fullWidth
                   label="Fecha"

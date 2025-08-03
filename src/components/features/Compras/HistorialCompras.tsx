@@ -38,6 +38,7 @@ interface HistorialComprasProps {
 interface CompraDetalle {
   supermercado: string;
   ubicacion: string;
+  metodoPago?: string;
   productos: Array<{
     id: string;
     nombre: string;
@@ -137,6 +138,15 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
     });
   };
 
+  const getMetodoPagoInfo = (metodoPago?: string) => {
+    const metodos = {
+      efectivo: { label: 'Efectivo', icon: '💵', color: 'success' },
+      debito: { label: 'Débito', icon: '💳', color: 'primary' },
+      credito: { label: 'Crédito', icon: '💳', color: 'warning' }
+    };
+    return metodos[metodoPago as keyof typeof metodos] || { label: metodoPago || 'No especificado', icon: '❓', color: 'default' };
+  };
+
   const calcularEstadisticas = () => {
     const totalGastado = compras.reduce((sum, compra) => sum + compra.amount, 0);
     const totalProductos = compras.reduce((sum, compra) => sum + compra.detalleCompra.totalProductos, 0);
@@ -147,12 +157,24 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
       return fechaCompra >= unMesAtras;
     });
 
+    // Estadísticas por método de pago
+    const porMetodoPago = compras.reduce((acc, compra) => {
+      const metodo = compra.detalleCompra.metodoPago || 'no-especificado';
+      if (!acc[metodo]) {
+        acc[metodo] = { cantidad: 0, total: 0 };
+      }
+      acc[metodo].cantidad += 1;
+      acc[metodo].total += compra.amount;
+      return acc;
+    }, {} as Record<string, { cantidad: number; total: number }>);
+
     return {
       totalGastado,
       totalProductos,
       totalCompras: compras.length,
       comprasUltimoMes: comprasUltimoMes.length,
-      gastoUltimoMes: comprasUltimoMes.reduce((sum, compra) => sum + compra.amount, 0)
+      gastoUltimoMes: comprasUltimoMes.reduce((sum, compra) => sum + compra.amount, 0),
+      porMetodoPago
     };
   };
 
@@ -226,6 +248,38 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
             </Box>
           </Grid>
         </Grid>
+
+        {/* Desglose por método de pago */}
+        {Object.keys(stats.porMetodoPago).length > 0 && (
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ mb: 2 }}>
+              Desglose por Método de Pago
+            </Typography>
+            <Grid container spacing={2}>
+              {Object.entries(stats.porMetodoPago).map(([metodo, datos]) => {
+                const metodoPagoInfo = getMetodoPagoInfo(metodo);
+                return (
+                  <Grid item xs={6} md={4} key={metodo}>
+                    <Paper sx={{ p: 2, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="h3" sx={{ mb: 1 }}>
+                        {metodoPagoInfo.icon}
+                      </Typography>
+                      <Typography variant="h6" color="primary">
+                        ${datos.total.toLocaleString()}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {metodoPagoInfo.label}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {datos.cantidad} compra{datos.cantidad !== 1 ? 's' : ''}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+        )}
       </Paper>
 
       {/* Lista de compras */}
@@ -273,7 +327,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                         <Typography variant="h6">
                           {compra.detalleCompra.supermercado}
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
                           <LocationOn fontSize="small" color="action" />
                           <Typography variant="body2" color="text.secondary">
                             {compra.detalleCompra.ubicacion}
@@ -283,6 +337,14 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                             label={formatFecha(compra.date)} 
                             variant="outlined"
                           />
+                          {compra.detalleCompra.metodoPago && (
+                            <Chip 
+                              size="small" 
+                              label={`${getMetodoPagoInfo(compra.detalleCompra.metodoPago).icon} ${getMetodoPagoInfo(compra.detalleCompra.metodoPago).label}`}
+                              color={getMetodoPagoInfo(compra.detalleCompra.metodoPago).color as any}
+                              variant="filled"
+                            />
+                          )}
                         </Box>
                       </Box>
                     </Box>
