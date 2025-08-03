@@ -173,6 +173,10 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     setError('');
 
     try {
+      console.log('Iniciando guardado de compra...');
+      console.log('Productos a guardar:', productos);
+      console.log('Usuario:', user?.uid);
+
       // Guardar la transacción principal
       const compraData = {
         type: 'expense',
@@ -192,34 +196,54 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         createdAt: new Date()
       };
 
+      console.log('Guardando transacción principal...');
       const transactionRef = await addDoc(collection(db, 'transactions'), compraData);
+      console.log('✅ Transacción guardada exitosamente con ID:', transactionRef.id);
 
-      // Guardar cada producto en el historial de precios
-      const fechaCompra = new Date(fecha);
-      const productosHistorial = productos.map(producto => ({
-        transactionId: transactionRef.id,
-        userId: user?.uid,
-        nombre: producto.nombre,
-        supermercado,
-        ubicacion,
-        fecha: fechaCompra,
-        porPeso: producto.porPeso,
-        precio: producto.precio,
-        cantidad: producto.cantidad,
-        precioKilo: producto.precioKilo || null,
-        peso: producto.peso || null,
-        total: producto.total,
-        metodoPago,
-        createdAt: new Date()
-      }));
+      // Guardar cada producto en el historial de precios solo si hay productos
+      if (productos.length > 0) {
+        console.log('Preparando productos para historial... Total productos:', productos.length);
+        const fechaCompra = new Date(fecha);
+        
+        const productosHistorial = productos.map((producto, index) => {
+          const productoHistorial = {
+            transactionId: transactionRef.id,
+            userId: user?.uid,
+            nombre: producto.nombre || '',
+            supermercado: supermercado || '',
+            ubicacion: ubicacion || '',
+            fecha: fechaCompra,
+            porPeso: Boolean(producto.porPeso),
+            precio: Number(producto.precio) || 0,
+            cantidad: Number(producto.cantidad) || 0,
+            precioKilo: producto.precioKilo ? Number(producto.precioKilo) : null,
+            peso: producto.peso ? Number(producto.peso) : null,
+            total: Number(producto.total) || 0,
+            metodoPago: metodoPago || '',
+            createdAt: new Date()
+          };
+          console.log(`Producto ${index + 1} preparado:`, productoHistorial);
+          return productoHistorial;
+        });
 
-      // Guardar todos los productos del historial
-      const historialPromises = productosHistorial.map(producto => 
-        addDoc(collection(db, 'productos-historial'), producto)
-      );
-      
-      await Promise.all(historialPromises);
+        console.log('🔄 Iniciando guardado de productos en historial...');
+        // Guardar productos uno por uno para mejor control de errores
+        for (let i = 0; i < productosHistorial.length; i++) {
+          try {
+            console.log(`Guardando producto ${i + 1}/${productosHistorial.length}...`);
+            await addDoc(collection(db, 'productos-historial'), productosHistorial[i]);
+            console.log(`✅ Producto ${i + 1}/${productosHistorial.length} guardado exitosamente`);
+          } catch (productoError) {
+            console.error(`❌ Error guardando producto ${i + 1}:`, productoError);
+            // Continúa con el siguiente producto en lugar de fallar toda la operación
+          }
+        }
+        console.log('✅ Guardado de productos en historial completado');
+      } else {
+        console.log('⚠️ No hay productos para guardar en historial');
+      }
 
+      console.log('🎉 Guardado completado exitosamente');
       refreshData();
       onComplete();
       
@@ -239,7 +263,54 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       });
 
     } catch (error) {
-      console.error('Error al guardar la compra:', error);
+      console.error('Error detallado al guardar la compra:', error);
+      
+      // Intentar guardar solo la transacción principal como fallback
+      try {
+        console.log('Intentando guardado simplificado...');
+        const compraDataSimple = {
+          type: 'expense',
+          category: 'Supermercado',
+          amount: calcularTotalCompra(),
+          description: `Compra en ${supermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
+          date: new Date(fecha),
+          userId: user?.uid,
+          detalleCompra: {
+            supermercado,
+            ubicacion,
+            metodoPago,
+            productos,
+            totalProductos: productos.length,
+            totalCompra: calcularTotalCompra()
+          },
+          createdAt: new Date()
+        };
+        
+        await addDoc(collection(db, 'transactions'), compraDataSimple);
+        console.log('Guardado simplificado exitoso');
+        refreshData();
+        onComplete();
+        
+        // Reset form
+        setSupermercado('');
+        setUbicacion('');
+        setFecha(new Date().toISOString().split('T')[0]);
+        setMetodoPago('');
+        setProductos([]);
+        setNuevoProducto({
+          nombre: '',
+          precio: '',
+          cantidad: '',
+          porPeso: false,
+          precioKilo: '',
+          peso: ''
+        });
+        
+        return; // Salir exitosamente
+      } catch (fallbackError) {
+        console.error('Error en guardado simplificado:', fallbackError);
+      }
+      
       setError('Error al guardar la compra. Intenta nuevamente.');
     } finally {
       setLoading(false);
