@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthProvider } from '../contexts/AuthContext';
+import { UserProfileProvider } from '../contexts/UserProfileContext';
 import { FinanceProvider } from '../contexts/FinanceContext';
 import { FinanceProfileProvider } from '../contexts/FinanceProfileContext';
 import { CssBaseline, ThemeProvider } from '@mui/material';
@@ -11,11 +12,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <FinanceProfileProvider>
-          <FinanceProvider>
-            {children}
-          </FinanceProvider>
-        </FinanceProfileProvider>
+        <UserProfileProvider>
+          <FinanceProfileProvider>
+            <FinanceProvider>
+              {children}
+            </FinanceProvider>
+          </FinanceProfileProvider>
+        </UserProfileProvider>
       </AuthProvider>
     </ThemeProvider>
   );

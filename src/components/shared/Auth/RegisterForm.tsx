@@ -14,16 +14,20 @@ import {
   StepLabel 
 } from '@mui/material';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useUserProfile } from '../../../contexts/UserProfileContext';
 import { useRouter } from 'next/navigation';
 import FinanceSetupForm from './FinanceSetupForm';
 
 export default function RegisterForm() {
   const [activeStep, setActiveStep] = useState(0);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const { register, loading } = useAuth();
+  const { createProfile } = useUserProfile();
   const router = useRouter();
 
   const steps = ['Crear Cuenta', 'Configurar Presupuesto'];
@@ -32,6 +36,11 @@ export default function RegisterForm() {
     e.preventDefault();
     setError('');
     
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Por favor ingresa tu nombre y apellido');
+      return;
+    }
+    
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden');
       return;
@@ -39,6 +48,12 @@ export default function RegisterForm() {
     
     try {
       await register(email, password);
+      // Crear el perfil de usuario con nombre y apellido
+      await createProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email
+      });
       setActiveStep(1); // Ir al paso de configuración financiera
     } catch (err: any) {
       setError(err.message || 'Error al registrarse');
@@ -88,6 +103,26 @@ export default function RegisterForm() {
         </Typography>
         
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        
+        <TextField
+          label="Nombre"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+          fullWidth
+          required
+          margin="normal"
+          placeholder="Ej: Raul"
+        />
+        
+        <TextField
+          label="Apellido"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          fullWidth
+          required
+          margin="normal"
+          placeholder="Ej: Rosales"
+        />
         
         <TextField
           label="Email"
