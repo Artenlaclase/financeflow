@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from 'react';
 import { Button, Box, Typography } from '@mui/material';
 import { Add, AttachMoney, CreditCard } from '@mui/icons-material';
+import IncomeForm from '../Forms/IncomeForm';
+import ExpenseForm from '../Forms/ExpenseForm';
+import DebtForm from '../Forms/DebtForm';
 
 export default function QuickActions() {
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [debtModalOpen, setDebtModalOpen] = useState(false);
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
@@ -14,7 +22,7 @@ export default function QuickActions() {
           variant="contained"
           startIcon={<Add />}
           sx={{ minWidth: 120 }}
-          onClick={() => console.log('Add Income')}
+          onClick={() => setIncomeModalOpen(true)}
         >
           Ingreso
         </Button>
@@ -23,7 +31,7 @@ export default function QuickActions() {
           color="secondary"
           startIcon={<AttachMoney />}
           sx={{ minWidth: 120 }}
-          onClick={() => console.log('Add Expense')}
+          onClick={() => setExpenseModalOpen(true)}
         >
           Gasto
         </Button>
@@ -32,11 +40,25 @@ export default function QuickActions() {
           color="warning"
           startIcon={<CreditCard />}
           sx={{ minWidth: 120 }}
-          onClick={() => console.log('Add Debt')}
+          onClick={() => setDebtModalOpen(true)}
         >
           Deuda
         </Button>
       </Box>
+
+      {/* Modales de formularios */}
+      <IncomeForm 
+        open={incomeModalOpen} 
+        onClose={() => setIncomeModalOpen(false)} 
+      />
+      <ExpenseForm 
+        open={expenseModalOpen} 
+        onClose={() => setExpenseModalOpen(false)} 
+      />
+      <DebtForm 
+        open={debtModalOpen} 
+        onClose={() => setDebtModalOpen(false)} 
+      />
     </Box>
   );
 }
