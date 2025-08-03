@@ -2,6 +2,7 @@
 
 import { AuthProvider } from '../contexts/AuthContext';
 import { FinanceProvider } from '../contexts/FinanceContext';
+import { FinanceProfileProvider } from '../contexts/FinanceProfileContext';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import theme from '../styles/theme';
 
@@ -10,9 +11,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <FinanceProvider>
-          {children}
-        </FinanceProvider>
+        <FinanceProfileProvider>
+          <FinanceProvider>
+            {children}
+          </FinanceProvider>
+        </FinanceProfileProvider>
       </AuthProvider>
     </ThemeProvider>
   );
