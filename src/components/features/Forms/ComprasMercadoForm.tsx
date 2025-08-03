@@ -173,6 +173,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     setError('');
 
     try {
+      // Guardar la transacción principal
       const compraData = {
         type: 'expense',
         category: 'Supermercado',
@@ -191,7 +192,34 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         createdAt: new Date()
       };
 
-      await addDoc(collection(db, 'transactions'), compraData);
+      const transactionRef = await addDoc(collection(db, 'transactions'), compraData);
+
+      // Guardar cada producto en el historial de precios
+      const fechaCompra = new Date(fecha);
+      const productosHistorial = productos.map(producto => ({
+        transactionId: transactionRef.id,
+        userId: user?.uid,
+        nombre: producto.nombre,
+        supermercado,
+        ubicacion,
+        fecha: fechaCompra,
+        porPeso: producto.porPeso,
+        precio: producto.precio,
+        cantidad: producto.cantidad,
+        precioKilo: producto.precioKilo || null,
+        peso: producto.peso || null,
+        total: producto.total,
+        metodoPago,
+        createdAt: new Date()
+      }));
+
+      // Guardar todos los productos del historial
+      const historialPromises = productosHistorial.map(producto => 
+        addDoc(collection(db, 'productos-historial'), producto)
+      );
+      
+      await Promise.all(historialPromises);
+
       refreshData();
       onComplete();
       

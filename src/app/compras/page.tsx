@@ -1,21 +1,27 @@
 "use client";
 
-import { Container, Typography, Box, Button, Grid } from '@mui/material';
+import { Container, Typography, Box, Button, Grid, Tabs, Tab } from '@mui/material';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowBack, ShoppingCart } from '@mui/icons-material';
+import { ArrowBack, ShoppingCart, Timeline, Receipt } from '@mui/icons-material';
 import AuthGuard from '@/components/shared/Auth/AuthGuard';
 import ComprasMercadoForm from '@/components/features/Forms/ComprasMercadoForm';
 import HistorialCompras from '@/components/features/Compras/HistorialCompras';
+import HistorialPrecios from '@/components/features/Compras/HistorialPrecios';
 
 export default function ComprasPage() {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleCompraCompleta = () => {
     setShowForm(false);
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
   };
 
   return (
@@ -51,9 +57,31 @@ export default function ComprasPage() {
           </Button>
         </Box>
 
+        {/* Tabs Navigation */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={activeTab} onChange={handleTabChange}>
+            <Tab 
+              icon={<Receipt />} 
+              label="Historial de Compras" 
+              iconPosition="start"
+            />
+            <Tab 
+              icon={<Timeline />} 
+              label="Historial de Precios" 
+              iconPosition="start"
+            />
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
         <Grid container spacing={3}>
           <Grid item xs={12}>
-            <HistorialCompras refreshTrigger={refreshTrigger} />
+            {activeTab === 0 && (
+              <HistorialCompras refreshTrigger={refreshTrigger} />
+            )}
+            {activeTab === 1 && (
+              <HistorialPrecios refreshTrigger={refreshTrigger} />
+            )}
           </Grid>
         </Grid>
 
