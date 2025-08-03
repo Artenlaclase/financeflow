@@ -9,6 +9,7 @@ import { useAuth } from './AuthContext';
 export interface FinanceProfile {
   userId: string;
   monthlyIncome: number;
+  incomeStartDate?: Date; // Fecha desde cuando se recibe el ingreso fijo
   fixedExpenses: {
     housing: number;
     phone: number;
@@ -17,6 +18,7 @@ export interface FinanceProfile {
     loans: number;
     insurance: number;
   };
+  expensesStartDate?: Date; // Fecha desde cuando se tienen los gastos fijos
   totalFixedExpenses: number;
   availableIncome: number;
   createdAt: Date;

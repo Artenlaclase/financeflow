@@ -76,10 +76,30 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
     return { startDate, endDate };
   };
 
-  const calculateMonthsInPeriod = (startDate: Date, endDate: Date) => {
-    const yearDiff = endDate.getFullYear() - startDate.getFullYear();
-    const monthDiff = endDate.getMonth() - startDate.getMonth();
-    return Math.max(1, yearDiff * 12 + monthDiff + 1);
+  const calculateMonthsInPeriod = (startDate: Date, endDate: Date, period: string, fixedItemStartDate?: Date) => {
+    const now = new Date();
+    
+    // Si hay una fecha de inicio para el item fijo, usarla como referencia
+    const effectiveStartDate = fixedItemStartDate && fixedItemStartDate > startDate 
+      ? fixedItemStartDate 
+      : startDate;
+    
+    // Para el año actual, solo contar hasta el mes actual o el mes final del período, lo que sea menor
+    if (period === 'thisYear' && effectiveStartDate.getFullYear() === now.getFullYear()) {
+      const currentMonth = now.getMonth();
+      const startMonth = effectiveStartDate.getMonth();
+      const endMonth = Math.min(endDate.getMonth(), currentMonth);
+      
+      // Si el item empezó después del período actual, no contar nada
+      if (startMonth > endMonth) return 0;
+      
+      return Math.max(1, endMonth - startMonth + 1);
+    }
+    
+    // Para otros casos, calcular normalmente considerando la fecha de inicio del item
+    const yearDiff = endDate.getFullYear() - effectiveStartDate.getFullYear();
+    const monthDiff = endDate.getMonth() - effectiveStartDate.getMonth();
+    return Math.max(0, yearDiff * 12 + monthDiff + 1);
   };
 
   const fetchAnalyticsData = async () => {
@@ -134,13 +154,24 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       const transactionExpenses = expensesData.reduce((sum, item) => sum + item.amount, 0);
       
       // Calcular cuántos meses están incluidos en el período para los gastos/ingresos fijos
-      const monthsInPeriod = calculateMonthsInPeriod(startDate, endDate);
+      const incomeMonthsInPeriod = calculateMonthsInPeriod(
+        startDate, 
+        endDate, 
+        selectedPeriod, 
+        profile?.incomeStartDate
+      );
+      const expensesMonthsInPeriod = calculateMonthsInPeriod(
+        startDate, 
+        endDate, 
+        selectedPeriod, 
+        profile?.expensesStartDate
+      );
       
       // Agregar ingresos fijos del perfil (ingreso mensual * meses en el período)
-      const fixedIncomeForPeriod = profile ? (profile.monthlyIncome * monthsInPeriod) : 0;
+      const fixedIncomeForPeriod = profile ? (profile.monthlyIncome * incomeMonthsInPeriod) : 0;
       
       // Agregar gastos fijos del perfil (gastos fijos mensuales * meses en el período)
-      const fixedExpensesForPeriod = profile ? (profile.totalFixedExpenses * monthsInPeriod) : 0;
+      const fixedExpensesForPeriod = profile ? (profile.totalFixedExpenses * expensesMonthsInPeriod) : 0;
       
       // Totales finales
       const totalIncome = transactionIncome + fixedIncomeForPeriod;
@@ -156,12 +187,12 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
 
       // Agregar gastos fijos como categorías separadas si hay un perfil
       if (profile && fixedExpensesForPeriod > 0) {
-        expensesByCategory['Vivienda (Fijo)'] = profile.fixedExpenses.housing * monthsInPeriod;
-        expensesByCategory['Telefonía (Fijo)'] = profile.fixedExpenses.phone * monthsInPeriod;
-        expensesByCategory['Internet (Fijo)'] = profile.fixedExpenses.internet * monthsInPeriod;
-        expensesByCategory['Tarjetas de Crédito (Fijo)'] = profile.fixedExpenses.creditCards * monthsInPeriod;
-        expensesByCategory['Préstamos (Fijo)'] = profile.fixedExpenses.loans * monthsInPeriod;
-        expensesByCategory['Seguros (Fijo)'] = profile.fixedExpenses.insurance * monthsInPeriod;
+        expensesByCategory['Vivienda (Fijo)'] = profile.fixedExpenses.housing * expensesMonthsInPeriod;
+        expensesByCategory['Telefonía (Fijo)'] = profile.fixedExpenses.phone * expensesMonthsInPeriod;
+        expensesByCategory['Internet (Fijo)'] = profile.fixedExpenses.internet * expensesMonthsInPeriod;
+        expensesByCategory['Tarjetas de Crédito (Fijo)'] = profile.fixedExpenses.creditCards * expensesMonthsInPeriod;
+        expensesByCategory['Préstamos (Fijo)'] = profile.fixedExpenses.loans * expensesMonthsInPeriod;
+        expensesByCategory['Seguros (Fijo)'] = profile.fixedExpenses.insurance * expensesMonthsInPeriod;
       }
 
       // Datos mensuales

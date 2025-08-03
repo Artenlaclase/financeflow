@@ -21,6 +21,9 @@ interface FinanceSetupFormProps {
 export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFormProps) {
   const { profile, createProfile, updateProfile, loading } = useFinanceProfile();
   const [monthlyIncome, setMonthlyIncome] = useState<number>(profile?.monthlyIncome || 0);
+  const [incomeStartDate, setIncomeStartDate] = useState<string>(
+    profile?.incomeStartDate ? new Date(profile.incomeStartDate).toISOString().split('T')[0] : ''
+  );
   const [fixedExpenses, setFixedExpenses] = useState({
     housing: profile?.fixedExpenses.housing || 0,
     phone: profile?.fixedExpenses.phone || 0,
@@ -29,6 +32,9 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
     loans: profile?.fixedExpenses.loans || 0,
     insurance: profile?.fixedExpenses.insurance || 0
   });
+  const [expensesStartDate, setExpensesStartDate] = useState<string>(
+    profile?.expensesStartDate ? new Date(profile.expensesStartDate).toISOString().split('T')[0] : ''
+  );
   const [error, setError] = useState('');
 
   const isUpdate = !!profile;
@@ -54,16 +60,17 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
     }
 
     try {
+      const profileData = {
+        monthlyIncome,
+        fixedExpenses,
+        ...(incomeStartDate && { incomeStartDate: new Date(incomeStartDate) }),
+        ...(expensesStartDate && { expensesStartDate: new Date(expensesStartDate) })
+      };
+
       if (isUpdate) {
-        await updateProfile({
-          monthlyIncome,
-          fixedExpenses
-        });
+        await updateProfile(profileData);
       } else {
-        await createProfile({
-          monthlyIncome,
-          fixedExpenses
-        });
+        await createProfile(profileData);
       }
       onComplete();
     } catch (err: any) {
@@ -90,18 +97,35 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
         <Typography variant="h6" gutterBottom>
           Ingreso Mensual
         </Typography>
-        <TextField
-          label="Ingreso mensual neto"
-          type="number"
-          value={monthlyIncome || ''}
-          onChange={(e) => setMonthlyIncome(parseFloat(e.target.value) || 0)}
-          fullWidth
-          required
-          InputProps={{
-            startAdornment: <InputAdornment position="start">$</InputAdornment>,
-          }}
-          helperText="Ingresa tu salario neto mensual después de descuentos"
-        />
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={8}>
+            <TextField
+              label="Ingreso mensual neto"
+              type="number"
+              value={monthlyIncome || ''}
+              onChange={(e) => setMonthlyIncome(parseFloat(e.target.value) || 0)}
+              fullWidth
+              required
+              InputProps={{
+                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              }}
+              helperText="Ingresa tu salario neto mensual después de descuentos"
+            />
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <TextField
+              label="Desde cuándo recibes este ingreso"
+              type="date"
+              value={incomeStartDate}
+              onChange={(e) => setIncomeStartDate(e.target.value)}
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              helperText="Fecha de inicio del empleo/ingreso fijo"
+            />
+          </Grid>
+        </Grid>
       </Paper>
 
       <Paper sx={{ p: 3, mb: 3 }}>
@@ -191,6 +215,20 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
                 startAdornment: <InputAdornment position="start">$</InputAdornment>,
               }}
               helperText="Seguros médicos, de vida, auto"
+            />
+          </Grid>
+          
+          <Grid item xs={12}>
+            <TextField
+              label="Desde cuándo tienes estos gastos fijos"
+              type="date"
+              value={expensesStartDate}
+              onChange={(e) => setExpensesStartDate(e.target.value)}
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              helperText="Fecha aproximada desde cuando tienes estos gastos (opcional)"
             />
           </Grid>
         </Grid>
