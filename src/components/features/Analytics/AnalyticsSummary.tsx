@@ -36,21 +36,24 @@ export default function AnalyticsSummary({ selectedPeriod, selectedYear }: Analy
       value: data.totalIncome,
       icon: <TrendingUp />,
       color: 'success.main',
-      bgColor: 'success.light'
+      bgColor: 'success.light',
+      subtitle: `Fijos: $${data.fixedIncomeTotal.toLocaleString()} | Variables: $${data.transactionIncomeTotal.toLocaleString()}`
     },
     {
       title: 'Gastos Totales',
       value: data.totalExpenses,
       icon: <TrendingDown />,
       color: 'error.main',
-      bgColor: 'error.light'
+      bgColor: 'error.light',
+      subtitle: `Fijos: $${data.fixedExpensesTotal.toLocaleString()} | Variables: $${data.transactionExpensesTotal.toLocaleString()}`
     },
     {
       title: 'Balance',
       value: data.balance,
       icon: <AccountBalance />,
       color: data.balance >= 0 ? 'success.main' : 'error.main',
-      bgColor: data.balance >= 0 ? 'success.light' : 'error.light'
+      bgColor: data.balance >= 0 ? 'success.light' : 'error.light',
+      subtitle: `${data.balance >= 0 ? 'Superávit' : 'Déficit'} del período`
     },
     {
       title: 'Transacciones',
@@ -99,7 +102,15 @@ export default function AnalyticsSummary({ selectedPeriod, selectedYear }: Analy
                   : `$${card.value.toLocaleString()}`
                 }
               </Typography>
-              {!card.isCount && (
+              
+              {/* Mostrar subtítulo si existe */}
+              {card.subtitle && (
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  {card.subtitle}
+                </Typography>
+              )}
+              
+              {!card.isCount && !card.subtitle && (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   {getPeriodLabel(selectedPeriod)}
                 </Typography>

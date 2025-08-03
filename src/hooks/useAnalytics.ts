@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
 import { useAuth } from '../contexts/AuthContext';
+import { useFinanceProfile } from '../contexts/FinanceProfileContext';
 
 export interface AnalyticsData {
   totalIncome: number;
@@ -17,17 +18,26 @@ export interface AnalyticsData {
     balance: number;
   }>;
   transactionCount: number;
+  fixedIncomeTotal: number;
+  fixedExpensesTotal: number;
+  transactionIncomeTotal: number;
+  transactionExpensesTotal: number;
 }
 
 export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
   const { user } = useAuth();
+  const { profile } = useFinanceProfile();
   const [data, setData] = useState<AnalyticsData>({
     totalIncome: 0,
     totalExpenses: 0,
     balance: 0,
     expensesByCategory: {},
     monthlyData: [],
-    transactionCount: 0
+    transactionCount: 0,
+    fixedIncomeTotal: 0,
+    fixedExpensesTotal: 0,
+    transactionIncomeTotal: 0,
+    transactionExpensesTotal: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +74,12 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
     }
 
     return { startDate, endDate };
+  };
+
+  const calculateMonthsInPeriod = (startDate: Date, endDate: Date) => {
+    const yearDiff = endDate.getFullYear() - startDate.getFullYear();
+    const monthDiff = endDate.getMonth() - startDate.getMonth();
+    return Math.max(1, yearDiff * 12 + monthDiff + 1);
   };
 
   const fetchAnalyticsData = async () => {
@@ -113,17 +129,40 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         };
       });
 
-      // Calcular totales
-      const totalIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
-      const totalExpenses = expensesData.reduce((sum, item) => sum + item.amount, 0);
+      // Calcular totales incluyendo datos del perfil financiero
+      const transactionIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
+      const transactionExpenses = expensesData.reduce((sum, item) => sum + item.amount, 0);
+      
+      // Calcular cuántos meses están incluidos en el período para los gastos/ingresos fijos
+      const monthsInPeriod = calculateMonthsInPeriod(startDate, endDate);
+      
+      // Agregar ingresos fijos del perfil (ingreso mensual * meses en el período)
+      const fixedIncomeForPeriod = profile ? (profile.monthlyIncome * monthsInPeriod) : 0;
+      
+      // Agregar gastos fijos del perfil (gastos fijos mensuales * meses en el período)
+      const fixedExpensesForPeriod = profile ? (profile.totalFixedExpenses * monthsInPeriod) : 0;
+      
+      // Totales finales
+      const totalIncome = transactionIncome + fixedIncomeForPeriod;
+      const totalExpenses = transactionExpenses + fixedExpensesForPeriod;
       const balance = totalIncome - totalExpenses;
 
-      // Gastos por categoría
+      // Gastos por categoría incluyendo gastos fijos
       const expensesByCategory: { [key: string]: number } = {};
       expensesData.forEach(expense => {
         const category = expense.category || 'Sin categoría';
         expensesByCategory[category] = (expensesByCategory[category] || 0) + expense.amount;
       });
+
+      // Agregar gastos fijos como categorías separadas si hay un perfil
+      if (profile && fixedExpensesForPeriod > 0) {
+        expensesByCategory['Vivienda (Fijo)'] = profile.fixedExpenses.housing * monthsInPeriod;
+        expensesByCategory['Telefonía (Fijo)'] = profile.fixedExpenses.phone * monthsInPeriod;
+        expensesByCategory['Internet (Fijo)'] = profile.fixedExpenses.internet * monthsInPeriod;
+        expensesByCategory['Tarjetas de Crédito (Fijo)'] = profile.fixedExpenses.creditCards * monthsInPeriod;
+        expensesByCategory['Préstamos (Fijo)'] = profile.fixedExpenses.loans * monthsInPeriod;
+        expensesByCategory['Seguros (Fijo)'] = profile.fixedExpenses.insurance * monthsInPeriod;
+      }
 
       // Datos mensuales
       const monthlyData: Array<{ month: string; income: number; expenses: number; balance: number }> = [];
@@ -155,8 +194,16 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         const monthIncomes = incomeData.filter(item => item.date.getMonth() === monthIndex);
         const monthExpenses = expensesData.filter(item => item.date.getMonth() === monthIndex);
         
-        const monthIncomeTotal = monthIncomes.reduce((sum, item) => sum + item.amount, 0);
-        const monthExpenseTotal = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
+        const monthTransactionIncomeTotal = monthIncomes.reduce((sum, item) => sum + item.amount, 0);
+        const monthTransactionExpenseTotal = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
+        
+        // Agregar ingresos y gastos fijos mensuales del perfil
+        const monthFixedIncome = profile ? profile.monthlyIncome : 0;
+        const monthFixedExpenses = profile ? profile.totalFixedExpenses : 0;
+        
+        // Totales mensuales finales
+        const monthIncomeTotal = monthTransactionIncomeTotal + monthFixedIncome;
+        const monthExpenseTotal = monthTransactionExpenseTotal + monthFixedExpenses;
         
         monthlyData.push({
           month: monthNames[monthIndex],
@@ -172,7 +219,11 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         balance,
         expensesByCategory,
         monthlyData,
-        transactionCount: incomeData.length + expensesData.length
+        transactionCount: incomeData.length + expensesData.length,
+        fixedIncomeTotal: fixedIncomeForPeriod,
+        fixedExpensesTotal: fixedExpensesForPeriod,
+        transactionIncomeTotal: transactionIncome,
+        transactionExpensesTotal: transactionExpenses
       });
 
     } catch (err) {
