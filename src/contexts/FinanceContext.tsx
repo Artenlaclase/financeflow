@@ -20,6 +20,7 @@ interface FinanceContextProps {
   expenses: number;
   debts: any[];
   recentTransactions: Transaction[];
+  refreshData: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextProps>({
@@ -27,7 +28,8 @@ const FinanceContext = createContext<FinanceContextProps>({
   income: 0,
   expenses: 0,
   debts: [],
-  recentTransactions: []
+  recentTransactions: [],
+  refreshData: () => {}
 });
 
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
@@ -139,6 +141,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const refreshData = () => {
+    // Esta función reestablece los listeners lo que fuerza una actualización
+    if (user) {
+      setupListeners();
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = setupListeners();
     return () => {
@@ -153,7 +162,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   }, [income, expenses]);
 
   return (
-    <FinanceContext.Provider value={{ balance, income, expenses, debts, recentTransactions }}>
+    <FinanceContext.Provider value={{ balance, income, expenses, debts, recentTransactions, refreshData }}>
       {children}
     </FinanceContext.Provider>
   );
