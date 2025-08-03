@@ -54,6 +54,15 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
     e.preventDefault();
     setError('');
 
+    console.log('🔄 Iniciando guardado del perfil financiero...');
+    console.log('Datos a guardar:', {
+      monthlyIncome,
+      fixedExpenses,
+      incomeStartDate,
+      expensesStartDate,
+      isUpdate
+    });
+
     if (monthlyIncome <= 0) {
       setError('Por favor ingresa un ingreso mensual válido');
       return;
@@ -67,13 +76,22 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
         ...(expensesStartDate && { expensesStartDate: new Date(expensesStartDate) })
       };
 
+      console.log('Datos del perfil preparados:', profileData);
+
       if (isUpdate) {
+        console.log('Actualizando perfil existente...');
         await updateProfile(profileData);
+        console.log('✅ Perfil actualizado exitosamente');
       } else {
+        console.log('Creando nuevo perfil...');
         await createProfile(profileData);
+        console.log('✅ Perfil creado exitosamente');
       }
+      
+      console.log('🎉 Llamando onComplete...');
       onComplete();
     } catch (err: any) {
+      console.error('❌ Error al guardar el perfil:', err);
       setError(err.message || 'Error al guardar el perfil financiero');
     }
   };

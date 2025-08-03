@@ -63,6 +63,10 @@ export function FinanceProfileProvider({ children }: { children: ReactNode }) {
   const createProfile = async (data: Omit<FinanceProfile, 'userId' | 'totalFixedExpenses' | 'availableIncome' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('Usuario no autenticado');
     
+    console.log('📝 FinanceProfileContext.createProfile iniciado');
+    console.log('Usuario:', user.uid);
+    console.log('Datos recibidos:', data);
+    
     setLoading(true);
     try {
       const { totalFixedExpenses, availableIncome } = calculateTotals(data.monthlyIncome, data.fixedExpenses);
@@ -76,13 +80,20 @@ export function FinanceProfileProvider({ children }: { children: ReactNode }) {
         updatedAt: new Date()
       };
 
+      console.log('Perfil a guardar en Firestore:', newProfile);
+      console.log('Guardando en documento:', `financeProfiles/${user.uid}`);
+
       await setDoc(doc(db, 'financeProfiles', user.uid), newProfile);
+      console.log('✅ Documento guardado en Firestore exitosamente');
+      
       setProfile(newProfile);
+      console.log('✅ Estado local actualizado');
     } catch (error) {
-      console.error('Error creating finance profile:', error);
+      console.error('❌ Error creating finance profile:', error);
       throw error;
     } finally {
       setLoading(false);
+      console.log('🏁 createProfile finalizado');
     }
   };
 
