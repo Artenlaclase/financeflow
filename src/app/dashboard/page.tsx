@@ -10,6 +10,7 @@ import RecentTransactions from '../../components/features/Dashboard/RecentTransa
 import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import { useRouter } from 'next/navigation';
+import { addTestTransactions } from '../../lib/testData';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -28,6 +29,17 @@ export default function DashboardPage() {
 
   const handleFinanceSetupComplete = () => {
     setShowFinanceSetup(false);
+  };
+
+  const handleLoadTestData = async () => {
+    if (user) {
+      try {
+        await addTestTransactions(user.uid);
+        console.log('Datos de prueba cargados');
+      } catch (error) {
+        console.error('Error cargando datos de prueba:', error);
+      }
+    }
   };
 
   if (showFinanceSetup) {
@@ -53,6 +65,13 @@ export default function DashboardPage() {
               color="primary"
             >
               Reconfigurar Presupuesto
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={handleLoadTestData}
+              color="secondary"
+            >
+              Cargar Datos de Prueba
             </Button>
             <Button variant="outlined" onClick={handleLogout}>
               Cerrar Sesión

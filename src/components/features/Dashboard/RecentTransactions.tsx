@@ -35,6 +35,9 @@ export default function RecentTransactions() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Debug log para ver las transacciones
+  console.log('RecentTransactions - Current transactions:', recentTransactions);
+
   if (!recentTransactions || recentTransactions.length === 0) {
     return (
       <Paper sx={{ p: 3 }}>
@@ -59,6 +62,14 @@ export default function RecentTransactions() {
   };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, transaction: any) => {
+    console.log('Transaction selected for menu:', transaction);
+    
+    // Validar que la transacción tiene los datos necesarios
+    if (!transaction || !transaction.id) {
+      setError('Error: Transacción no válida');
+      return;
+    }
+    
     setAnchorEl(event.currentTarget);
     setSelectedTransaction(transaction);
   };
@@ -79,8 +90,23 @@ export default function RecentTransactions() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!user || !selectedTransaction) {
-      setError('Error: Usuario o transacción no válida');
+    if (!user) {
+      setError('Error: Usuario no autenticado');
+      return;
+    }
+
+    if (!selectedTransaction) {
+      setError('Error: No se ha seleccionado ninguna transacción');
+      return;
+    }
+
+    if (!selectedTransaction.id) {
+      setError('Error: La transacción no tiene un ID válido');
+      return;
+    }
+
+    if (!selectedTransaction.type || (selectedTransaction.type !== 'income' && selectedTransaction.type !== 'expense')) {
+      setError('Error: Tipo de transacción no válido');
       return;
     }
     
@@ -91,7 +117,9 @@ export default function RecentTransactions() {
       console.log('Attempting to delete transaction:', {
         userId: user.uid,
         transactionId: selectedTransaction.id,
-        type: selectedTransaction.type
+        type: selectedTransaction.type,
+        amount: selectedTransaction.amount,
+        description: selectedTransaction.description
       });
       
       await deleteTransaction(user.uid, selectedTransaction.id, selectedTransaction.type);
@@ -109,6 +137,7 @@ export default function RecentTransactions() {
     } catch (error) {
       console.error('Error deleting transaction:', error);
       setError((error as Error).message || 'Error al eliminar la transacción');
+      // No cerrar el diálogo en caso de error para que el usuario pueda intentar de nuevo
     } finally {
       setLoading(false);
     }
@@ -137,51 +166,70 @@ export default function RecentTransactions() {
         Transacciones Recientes
       </Typography>
       
+      {/* Debug: Mostrar información de las transacciones */}
+      {process.env.NODE_ENV === 'development' && (
+        <Box sx={{ mb: 2, p: 1, bgcolor: 'grey.100', fontSize: '0.8rem' }}>
+          <Typography variant="caption">
+            Debug: {recentTransactions.length} transacciones cargadas
+          </Typography>
+        </Box>
+      )}
+      
       <List sx={{ width: '100%' }}>
-        {recentTransactions.map((transaction: any, index: number) => (
-          <Box key={`${transaction.type}-${transaction.id}-${index}`}>
-            <ListItem sx={{ px: 0 }}>
-              <ListItemText
-                primary={
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="body1">
-                      {transaction.description || transaction.category || 'Sin descripción'}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          fontWeight: 'bold',
-                          color: transaction.type === 'income' ? 'success.main' : 'error.main'
-                        }}
-                      >
-                        {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+        {recentTransactions.map((transaction: any, index: number) => {
+          // Validar datos de la transacción antes de renderizar
+          const isValidTransaction = transaction && transaction.id && transaction.type && typeof transaction.amount === 'number';
+          
+          if (!isValidTransaction) {
+            console.warn('Invalid transaction data:', transaction);
+            return null;
+          }
+          
+          return (
+            <Box key={`${transaction.type}-${transaction.id}-${index}`}>
+              <ListItem sx={{ px: 0 }}>
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body1">
+                        {transaction.description || transaction.category || 'Sin descripción'}
                       </Typography>
-                      <Chip 
-                        label={transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
-                        size="small"
-                        color={transaction.type === 'income' ? 'success' : 'error'}
-                      />
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuClick(e, transaction)}
-                        disabled={loading}
-                      >
-                        <MoreVert fontSize="small" />
-                      </IconButton>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontWeight: 'bold',
+                            color: transaction.type === 'income' ? 'success.main' : 'error.main'
+                          }}
+                        >
+                          {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                        </Typography>
+                        <Chip 
+                          label={transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
+                          size="small"
+                          color={transaction.type === 'income' ? 'success' : 'error'}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuClick(e, transaction)}
+                          disabled={loading}
+                        >
+                          <MoreVert fontSize="small" />
+                        </IconButton>
+                      </Box>
                     </Box>
-                  </Box>
-                }
-                secondary={
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDate(transaction.date)}
-                  </Typography>
-                }
-              />
-            </ListItem>
-            {index < recentTransactions.length - 1 && <Divider />}
-          </Box>
-        ))}
+                  }
+                  secondary={
+                    <Typography variant="caption" color="text.secondary">
+                      {formatDate(transaction.date)}
+                    </Typography>
+                  }
+                />
+              </ListItem>
+              {index < recentTransactions.length - 1 && <Divider />}
+            </Box>
+          );
+        })}
       </List>
 
       {/* Menu de acciones */}

@@ -43,9 +43,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const refreshData = () => {
     if (!user) return;
 
-    let incomeTransactions: Transaction[] = [];
-    let expenseTransactions: Transaction[] = [];
-
     // Obtener ingresos
     const incomeQuery = query(
       collection(db, 'users', user.uid, 'income'),
@@ -56,17 +53,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       const total = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
       setIncome(total);
       
-      // Actualizar ingresos en transacciones
-      incomeTransactions = snapshot.docs.map(doc => ({
-        id: doc.id,
-        type: 'income' as const,
-        amount: doc.data().amount,
-        description: doc.data().description,
-        category: doc.data().category,
-        date: doc.data().date
-      }));
+      // Crear array de transacciones de ingresos
+      const incomeTransactions = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: 'income' as const,
+          amount: data.amount || 0,
+          description: data.description || '',
+          category: data.category || '',
+          date: data.date
+        };
+      });
       
-      updateRecentTransactions();
+      console.log('Income transactions loaded:', incomeTransactions);
+      updateRecentTransactions(incomeTransactions, 'income');
     });
 
     // Obtener gastos
@@ -79,32 +80,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       const total = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
       setExpenses(total);
       
-      // Actualizar gastos en transacciones
-      expenseTransactions = snapshot.docs.map(doc => ({
-        id: doc.id,
-        type: 'expense' as const,
-        amount: doc.data().amount,
-        description: doc.data().description,
-        category: doc.data().category,
-        date: doc.data().date
-      }));
+      // Crear array de transacciones de gastos
+      const expenseTransactions = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          type: 'expense' as const,
+          amount: data.amount || 0,
+          description: data.description || '',
+          category: data.category || '',
+          date: data.date
+        };
+      });
       
-      updateRecentTransactions();
+      console.log('Expense transactions loaded:', expenseTransactions);
+      updateRecentTransactions(expenseTransactions, 'expense');
     });
-
-    // Función para actualizar transacciones recientes
-    const updateRecentTransactions = () => {
-      const combined = [...incomeTransactions, ...expenseTransactions];
-      const sorted = combined
-        .sort((a, b) => {
-          const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
-          const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
-          return dateB.getTime() - dateA.getTime();
-        })
-        .slice(0, 10);
-      
-      setRecentTransactions(sorted);
-    };
 
     // Obtener deudas
     const debtsQuery = query(
@@ -120,6 +111,29 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       unsubscribeExpenses();
       unsubscribeDebts();
     };
+  };
+
+  // Función para actualizar transacciones recientes
+  const updateRecentTransactions = (newTransactions: Transaction[], type: 'income' | 'expense') => {
+    setRecentTransactions(prev => {
+      // Filtrar las transacciones del tipo que se está actualizando
+      const filtered = prev.filter(t => t.type !== type);
+      
+      // Combinar con las nuevas transacciones
+      const combined = [...filtered, ...newTransactions];
+      
+      // Ordenar por fecha y limitar a 10
+      const sorted = combined
+        .sort((a, b) => {
+          const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || Date.now());
+          const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || Date.now());
+          return dateB.getTime() - dateA.getTime();
+        })
+        .slice(0, 10);
+      
+      console.log('Updated recent transactions:', sorted);
+      return sorted;
+    });
   };
 
   useEffect(() => {
