@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Button, Box, Typography } from '@mui/material';
-import { Add, AttachMoney, CreditCard } from '@mui/icons-material';
+import { Add, AttachMoney, CreditCard, ShoppingCart } from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
 import IncomeForm from '../Forms/IncomeForm';
 import ExpenseForm from '../Forms/ExpenseForm';
 import DebtForm from '../Forms/DebtForm';
@@ -11,6 +12,7 @@ export default function QuickActions() {
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <Box sx={{ p: 2 }}>
@@ -34,6 +36,15 @@ export default function QuickActions() {
           onClick={() => setExpenseModalOpen(true)}
         >
           Gasto
+        </Button>
+        <Button
+          variant="contained"
+          color="success"
+          startIcon={<ShoppingCart />}
+          sx={{ minWidth: 120 }}
+          onClick={() => router.push('/compras')}
+        >
+          Compras
         </Button>
         <Button
           variant="contained"

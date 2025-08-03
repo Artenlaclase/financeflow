@@ -12,7 +12,7 @@ import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
 import EditProfileDialog from '../../components/shared/Auth/EditProfileDialog';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import { useRouter } from 'next/navigation';
-import { Analytics, Edit, Person } from '@mui/icons-material';
+import { Analytics, Edit, Person, ShoppingCart } from '@mui/icons-material';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -108,6 +108,14 @@ export default function DashboardPage() {
               color="secondary"
             >
               Ver Análisis
+            </Button>
+            <Button 
+              variant="contained" 
+              startIcon={<ShoppingCart />}
+              onClick={() => router.push('/compras')}
+              color="success"
+            >
+              Compras Mercado
             </Button>
             <Button 
               variant="outlined" 
