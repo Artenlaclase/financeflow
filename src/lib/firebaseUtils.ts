@@ -47,7 +47,10 @@ export const deleteTransaction = async (
   transactionId: string, 
   type: 'income' | 'expense'
 ): Promise<void> => {
+  console.log('deleteTransaction called with:', { userId, transactionId, type });
+  
   if (!userId || !transactionId || !type) {
+    console.error('Invalid parameters:', { userId, transactionId, type });
     throw new Error('Parámetros inválidos para eliminar la transacción');
   }
 
@@ -57,10 +60,24 @@ export const deleteTransaction = async (
     console.log('Deleting from collection:', collectionName, 'Document ID:', transactionId);
     
     const docRef = doc(db, 'users', userId, collectionName, transactionId);
+    console.log('Document reference created:', docRef.path);
+    
     await deleteDoc(docRef);
     console.log('Transaction deleted successfully:', transactionId);
   } catch (error) {
-    console.error('Error deleting transaction:', error);
-    throw new Error('Error al eliminar la transacción: ' + (error as Error).message);
+    console.error('Firestore delete error:', error);
+    
+    // Proporcionar más información sobre el error
+    if (error instanceof Error) {
+      if (error.message.includes('permission')) {
+        throw new Error('Sin permisos para eliminar la transacción. Verifica las reglas de Firestore.');
+      } else if (error.message.includes('not-found')) {
+        throw new Error('La transacción no existe o ya fue eliminada.');
+      } else {
+        throw new Error('Error al eliminar la transacción: ' + error.message);
+      }
+    } else {
+      throw new Error('Error desconocido al eliminar la transacción');
+    }
   }
 };

@@ -39,6 +39,13 @@ export default function RecentTransactions() {
   // Debug log para ver las transacciones
   console.log('RecentTransactions - Current transactions:', recentTransactions);
   console.log('RecentTransactions - User:', user);
+  console.log('RecentTransactions - Transactions length:', recentTransactions?.length || 0);
+  console.log('RecentTransactions - Menu state:', { 
+    anchorEl: Boolean(anchorEl), 
+    selectedTransaction: selectedTransaction?.id,
+    deleteDialogOpen,
+    editDialogOpen 
+  });
 
   if (!user) {
     return (
@@ -77,14 +84,17 @@ export default function RecentTransactions() {
   };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, transaction: any) => {
+    console.log('handleMenuClick called');
     console.log('Transaction selected for menu:', transaction);
     
     // Validar que la transacción tiene los datos necesarios
     if (!transaction || !transaction.id) {
+      console.error('Invalid transaction for menu:', transaction);
       setError('Error: Transacción no válida');
       return;
     }
     
+    console.log('Setting anchor and selected transaction');
     setAnchorEl(event.currentTarget);
     setSelectedTransaction(transaction);
   };
@@ -95,32 +105,42 @@ export default function RecentTransactions() {
   };
 
   const handleEdit = () => {
+    console.log('handleEdit called with transaction:', selectedTransaction);
     setEditDialogOpen(true);
     handleMenuClose();
   };
 
   const handleDeleteClick = () => {
+    console.log('handleDeleteClick called with transaction:', selectedTransaction);
     setDeleteDialogOpen(true);
     handleMenuClose();
   };
 
   const handleDeleteConfirm = async () => {
+    console.log('handleDeleteConfirm called');
+    console.log('User:', user);
+    console.log('Selected transaction:', selectedTransaction);
+    
     if (!user) {
+      console.error('No user authenticated');
       setError('Error: Usuario no autenticado');
       return;
     }
 
     if (!selectedTransaction) {
+      console.error('No transaction selected');
       setError('Error: No se ha seleccionado ninguna transacción');
       return;
     }
 
     if (!selectedTransaction.id) {
+      console.error('Transaction has no ID:', selectedTransaction);
       setError('Error: La transacción no tiene un ID válido');
       return;
     }
 
     if (!selectedTransaction.type || (selectedTransaction.type !== 'income' && selectedTransaction.type !== 'expense')) {
+      console.error('Invalid transaction type:', selectedTransaction.type);
       setError('Error: Tipo de transacción no válido');
       return;
     }
@@ -138,6 +158,8 @@ export default function RecentTransactions() {
       });
       
       await deleteTransaction(user.uid, selectedTransaction.id, selectedTransaction.type);
+      
+      console.log('Transaction deleted successfully');
       
       // Los listeners de Firestore actualizarán automáticamente los datos
       // No necesitamos llamar refreshData() manualmente
@@ -170,26 +192,32 @@ export default function RecentTransactions() {
     setError(null);
   };
 
-  const handleTestTransaction = async () => {
-    if (!user) return;
-    
+  const handleTestFirestore = async () => {
+    if (!user) {
+      console.error('No user authenticated');
+      setError('Usuario no autenticado');
+      return;
+    }
+
     try {
-      const { addDoc, collection } = await import('firebase/firestore');
+      console.log('Testing Firestore connection...');
+      const { collection, getDocs } = await import('firebase/firestore');
       const { db } = await import('../../../lib/firebase/config');
       
-      await addDoc(collection(db, 'users', user.uid, 'expenses'), {
-        amount: 10.50,
-        category: 'Test',
-        description: 'Transacción de prueba',
-        date: new Date(),
-        createdAt: new Date()
-      });
+      // Probar lectura de gastos
+      const expensesRef = collection(db, 'users', user.uid, 'expenses');
+      const expensesSnapshot = await getDocs(expensesRef);
+      console.log('Expenses found:', expensesSnapshot.size);
       
-      console.log('Test transaction added');
-      setSuccess('Transacción de prueba agregada');
+      // Probar lectura de ingresos
+      const incomeRef = collection(db, 'users', user.uid, 'income');
+      const incomeSnapshot = await getDocs(incomeRef);
+      console.log('Income found:', incomeSnapshot.size);
+      
+      setSuccess(`Firestore conectado: ${expensesSnapshot.size} gastos, ${incomeSnapshot.size} ingresos`);
     } catch (error) {
-      console.error('Error adding test transaction:', error);
-      setError('Error al agregar transacción de prueba');
+      console.error('Firestore test error:', error);
+      setError('Error de conexión con Firestore: ' + (error as Error).message);
     }
   };
 
@@ -205,14 +233,16 @@ export default function RecentTransactions() {
           Transacciones Recientes
         </Typography>
         {process.env.NODE_ENV === 'development' && (
-          <Button 
-            variant="outlined" 
-            size="small" 
-            onClick={handleTestTransaction}
-            disabled={loading}
-          >
-            + Test
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={handleTestFirestore}
+              disabled={loading}
+            >
+              Test DB
+            </Button>
+          </Box>
         )}
       </Box>
       
@@ -265,8 +295,16 @@ export default function RecentTransactions() {
                         />
                         <IconButton
                           size="small"
-                          onClick={(e) => handleMenuClick(e, transaction)}
+                          onClick={(e) => {
+                            console.log('Menu button clicked for transaction:', transaction);
+                            handleMenuClick(e, transaction);
+                          }}
                           disabled={loading}
+                          sx={{ 
+                            '&:hover': { 
+                              backgroundColor: 'action.hover' 
+                            }
+                          }}
                         >
                           <MoreVert fontSize="small" />
                         </IconButton>
@@ -290,13 +328,22 @@ export default function RecentTransactions() {
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
+        onClose={() => {
+          console.log('Menu closing');
+          handleMenuClose();
+        }}
       >
-        <MenuItem onClick={handleEdit}>
+        <MenuItem onClick={() => {
+          console.log('Edit MenuItem clicked');
+          handleEdit();
+        }}>
           <Edit fontSize="small" sx={{ mr: 1 }} />
           Editar
         </MenuItem>
-        <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={() => {
+          console.log('Delete MenuItem clicked');
+          handleDeleteClick();
+        }} sx={{ color: 'error.main' }}>
           <Delete fontSize="small" sx={{ mr: 1 }} />
           Eliminar
         </MenuItem>

@@ -7,6 +7,7 @@ import { useFinanceProfile } from '@/contexts/FinanceProfileContext';
 import BalanceCard from '../../components/features/Dashboard/BalanceCard';
 import QuickActions from '../../components/features/Dashboard/QuickActions';
 import RecentTransactions from '../../components/features/Dashboard/RecentTransactions';
+import FirestoreDiagnostic from '../../components/features/Dashboard/FirestoreDiagnostic';
 import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import { useRouter } from 'next/navigation';
@@ -121,6 +122,10 @@ export default function DashboardPage() {
       )}
       
       <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <FirestoreDiagnostic />
+        </Grid>
+        
         <Grid item xs={12} md={6}>
           <BalanceCard />
         </Grid>
