@@ -4,9 +4,9 @@ import { Container, Typography, Box, Button, Grid } from '@mui/material';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowBack, ShoppingCart } from '@mui/icons-material';
-import AuthGuard from '../../components/shared/Auth/AuthGuard';
-import ComprasMercadoForm from '../../components/features/Forms/ComprasMercadoForm';
-import HistorialCompras from '../../components/features/Compras/HistorialCompras';
+import AuthGuard from '@/components/shared/Auth/AuthGuard';
+import ComprasMercadoForm from '@/components/features/Forms/ComprasMercadoForm';
+import HistorialCompras from '@/components/features/Compras/HistorialCompras';
 
 export default function ComprasPage() {
   const router = useRouter();
