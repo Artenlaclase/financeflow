@@ -1,5 +1,5 @@
 import { Card, CardContent, Typography, Box } from '@mui/material';
-import { useFinance } from '../../../app/context/FinanceContext';
+import { useFinance } from '../../../contexts/FinanceContext';
 
 export default function BalanceCard() {
   const { balance } = useFinance();

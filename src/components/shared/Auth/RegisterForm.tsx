@@ -8,31 +8,38 @@ import {
   CircularProgress,
   Alert 
 } from '@mui/material';
-import { useAuth } from '../../../app/context/AuthContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useRouter } from 'next/router';
 
-export default function LoginForm() {
+export default function RegisterForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, loading } = useAuth();
+  const { register, loading } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+    
     try {
-      await login(email, password);
+      await register(email, password);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Error al iniciar sesión');
+      setError(err.message || 'Error al registrarse');
     }
   };
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
       <Typography variant="h5" gutterBottom>
-        Iniciar Sesión
+        Crear Cuenta
       </Typography>
       
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -57,6 +64,16 @@ export default function LoginForm() {
         margin="normal"
       />
       
+      <TextField
+        label="Confirmar Contraseña"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        fullWidth
+        required
+        margin="normal"
+      />
+      
       <Button 
         type="submit" 
         variant="contained" 
@@ -64,20 +81,14 @@ export default function LoginForm() {
         sx={{ mt: 2 }}
         disabled={loading}
       >
-        {loading ? <CircularProgress size={24} /> : 'Iniciar Sesión'}
+        {loading ? <CircularProgress size={24} /> : 'Crear Cuenta'}
       </Button>
       
       <Box sx={{ mt: 2, textAlign: 'center' }}>
-        <Link href="/reset-password" variant="body2">
-          ¿Olvidaste tu contraseña?
-        </Link>
-      </Box>
-      
-      <Box sx={{ mt: 2, textAlign: 'center' }}>
         <Typography variant="body2">
-          ¿No tienes cuenta?{' '}
-          <Link href="/register" variant="body2">
-            Regístrate
+          ¿Ya tienes cuenta?{' '}
+          <Link href="/login" variant="body2">
+            Iniciar Sesión
           </Link>
         </Typography>
       </Box>

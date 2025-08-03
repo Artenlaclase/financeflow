@@ -1,5 +1,5 @@
 import { Card, CardContent, Typography, List, ListItem, ListItemText, Chip } from '@mui/material';
-import { useFinance } from '../../context/FinanceContext';
+import { useFinance } from '../../../app/context/FinanceContext';
 
 export default function DebtsCard() {
   const { debts } = useFinance();

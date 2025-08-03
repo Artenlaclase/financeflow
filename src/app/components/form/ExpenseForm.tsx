@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Button, TextField, MenuItem, Box, Typography } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import { addExpense } from '../../lib/firebaseUtils';
-import { useFinance } from '../../context/FinanceContext';
+import { useFinance } from '../../../app/context/FinanceContext';
+import { useAuth } from '../../../app/context/AuthContext';
 
 const categories = [
   'Comida',
@@ -20,6 +21,7 @@ export default function ExpenseForm() {
   const [category, setCategory] = useState('');
   const [date, setDate] = useState(new Date());
   const { refreshData } = useFinance();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

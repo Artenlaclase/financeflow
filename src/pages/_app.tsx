@@ -1,5 +1,5 @@
-import { AuthProvider } from '../app/context/AuthContext';
-import { FinanceProvider } from '../app/context/FinanceContext';
+import { AuthProvider } from '../contexts/AuthContext';
+import { FinanceProvider } from '../contexts/FinanceContext';
 import type { AppProps } from 'next/app';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import theme from '../styles/theme';
