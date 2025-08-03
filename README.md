@@ -82,11 +82,14 @@ users (collection)
     ├── income (subcollection)
     ├── expenses (subcollection)
     ├── debts (subcollection)
-    └── savings (subcollection) ```
+    └── savings (subcollection) 
+    
+```
 
 ---
 
 ## Subcolecciones por usuario:
+
 income: { fecha, monto, categoría }
 
 expenses: { fecha, monto, categoría }
@@ -94,6 +97,7 @@ expenses: { fecha, monto, categoría }
 debts: { descripción, monto, vencimiento, estado }
 
 savings: { meta, actual, fechaObjetivo }
+
 ---
 
 ## 📦 Entregables esperados
@@ -110,7 +114,10 @@ Sistema de notificaciones básico
 
 Documentación mínima para despliegue
 
-🔒 Notas adicionales
+---
+
+## 🔒 Notas adicionales
+
 Priorizar funcionalidad mobile-first
 
 Usar Context API o Zustand para gestión de estado
@@ -121,5 +128,7 @@ Incluir loading states en todas las operaciones asincrónicas
 
 Preferir transiciones suaves entre vistas
 
-📄 Licencia
+---
+
+## 📄 Licencia
 Este proyecto es de código cerrado y se encuentra en desarrollo. Para colaboraciones, contáctame.
