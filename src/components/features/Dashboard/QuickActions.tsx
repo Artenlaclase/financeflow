@@ -1,3 +1,5 @@
+"use client";
+
 import { Button, Box, Typography } from '@mui/material';
 import { Add, AttachMoney, CreditCard } from '@mui/icons-material';
 

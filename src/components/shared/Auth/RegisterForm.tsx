@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from 'react';
 import { 
   Button, 
@@ -9,7 +11,7 @@ import {
   Alert 
 } from '@mui/material';
 import { useAuth } from '../../../contexts/AuthContext';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
