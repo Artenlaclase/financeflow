@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, Chip } from '@mui/material';
-import { useAnalytics } from '../../../hooks/useAnalytics';
+import { useAnalytics } from '../../../hooks/useAnalyticsSimplified';
 
 interface ExpensesByCategoryChartProps {
   selectedPeriod: string;

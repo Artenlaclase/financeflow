@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Typography, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { useAnalytics } from '../../../hooks/useAnalytics';
+import { useAnalytics } from '../../../hooks/useAnalyticsSimplified';
 
 interface MonthlyTrendChartProps {
   selectedPeriod: string;

@@ -2,7 +2,7 @@
 
 import { Grid, Card, CardContent, Typography, Box, CircularProgress } from '@mui/material';
 import { TrendingUp, TrendingDown, AccountBalance, Receipt } from '@mui/icons-material';
-import { useAnalytics } from '../../../hooks/useAnalytics';
+import { useAnalytics } from '../../../hooks/useAnalyticsSimplified';
 
 interface AnalyticsSummaryProps {
   selectedPeriod: string;

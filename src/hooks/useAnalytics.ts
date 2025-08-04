@@ -112,19 +112,43 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       const { startDate, endDate } = getDateRange(selectedPeriod, selectedYear);
       console.log('📊 Analytics date range:', { startDate, endDate });
 
-      // Datos temporales para evitar errores de permisos
-      console.log('📊 Using mock data temporarily to avoid permissions issues');
+      // Consultar transacciones de la colección global
+      const transactionsQuery = query(
+        collection(db, 'transactions'),
+        where('userId', '==', user.uid)
+      );
+      
+      console.log('📊 Fetching transactions from global collection...');
+      const transactionsSnapshot = await getDocs(transactionsQuery);
+      console.log('📊 Found', transactionsSnapshot.size, 'total transactions');
+      
       const incomeData: any[] = [];
       const expensesData: any[] = [];
-      const comprasData: any[] = [];
-
-      // Combinar gastos regulares con compras de supermercado
-      const allExpensesData = [...expensesData, ...comprasData];
-      console.log('📊 Combined expenses data:', allExpensesData.length, 'total expenses');
+      
+      transactionsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const transactionDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
+        
+        // Filtrar por fecha
+        if (transactionDate >= startDate && transactionDate <= endDate) {
+          if (data.type === 'income') {
+            incomeData.push(data);
+          } else if (data.type === 'expense') {
+            expensesData.push(data);
+          }
+        }
+      });
+      
+      console.log('📊 Filtered transactions for period:', {
+        income: incomeData.length,
+        expenses: expensesData.length,
+        period: selectedPeriod,
+        dateRange: { startDate, endDate }
+      });
 
       // Calcular totales incluyendo datos del perfil financiero
-      const transactionIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
-      const transactionExpenses = allExpensesData.reduce((sum, item) => sum + item.amount, 0);
+      const transactionIncome = incomeData.reduce((sum: number, item: any) => sum + item.amount, 0);
+      const transactionExpenses = expensesData.reduce((sum: number, item: any) => sum + item.amount, 0);
       
       // Calcular cuántos meses están incluidos en el período para los gastos/ingresos fijos
       const incomeMonthsInPeriod = calculateMonthsInPeriod(
@@ -153,7 +177,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
 
       // Gastos por categoría incluyendo gastos fijos
       const expensesByCategory: { [key: string]: number } = {};
-      allExpensesData.forEach(expense => {
+      expensesData.forEach((expense: any) => {
         const category = expense.category || 'Sin categoría';
         expensesByCategory[category] = (expensesByCategory[category] || 0) + expense.amount;
       });
@@ -195,11 +219,11 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       }
 
       monthsToInclude.forEach(monthIndex => {
-        const monthIncomes = incomeData.filter(item => item.date.getMonth() === monthIndex);
-        const monthExpenses = allExpensesData.filter(item => item.date.getMonth() === monthIndex);
+        const monthIncomes = incomeData.filter((item: any) => item.date.getMonth() === monthIndex);
+        const monthExpenses = expensesData.filter((item: any) => item.date.getMonth() === monthIndex);
         
-        const monthTransactionIncomeTotal = monthIncomes.reduce((sum, item) => sum + item.amount, 0);
-        const monthTransactionExpenseTotal = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
+        const monthTransactionIncomeTotal = monthIncomes.reduce((sum: number, item: any) => sum + item.amount, 0);
+        const monthTransactionExpenseTotal = monthExpenses.reduce((sum: number, item: any) => sum + item.amount, 0);
         
         // Agregar ingresos y gastos fijos mensuales del perfil
         const monthFixedIncome = profile ? profile.monthlyIncome : 0;
@@ -223,7 +247,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         balance,
         expensesByCategory,
         monthlyData,
-        transactionCount: incomeData.length + allExpensesData.length,
+        transactionCount: incomeData.length + expensesData.length,
         fixedIncomeTotal: fixedIncomeForPeriod,
         fixedExpensesTotal: fixedExpensesForPeriod,
         transactionIncomeTotal: transactionIncome,

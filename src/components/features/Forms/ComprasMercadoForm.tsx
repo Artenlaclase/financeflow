@@ -201,8 +201,15 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('🚀 INICIO handleSubmit');
+    console.log('📋 Datos del formulario:', { supermercado, ubicacion, metodoPago, productosCount: productos.length });
+    console.log('👤 Usuario:', user ? { uid: user.uid, email: user.email } : 'No autenticado');
+    console.log('🔥 Firebase db object:', db);
+    
     if (!supermercado || !ubicacion || !metodoPago || productos.length === 0) {
-      setError('Completa todos los campos requeridos y agrega al menos un producto');
+      const errorMsg = 'Completa todos los campos requeridos y agrega al menos un producto';
+      console.log('❌ Validación fallida:', errorMsg);
+      setError(errorMsg);
       return;
     }
 

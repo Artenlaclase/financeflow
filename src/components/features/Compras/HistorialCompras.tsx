@@ -66,12 +66,10 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
 
     console.log('Setting up compras listener for user:', user.uid);
 
+    // Versión simplificada - solo filtrar por userId primero
     const q = query(
       collection(db, 'transactions'),
-      where('userId', '==', user.uid),
-      where('category', '==', 'Supermercado'),
-      where('type', '==', 'expense'),
-      orderBy('date', 'desc')
+      where('userId', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, 
@@ -80,19 +78,31 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
         const comprasData: CompraTransaction[] = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          if (data.detalleCompra) {
+          // Filtrar localmente por categoría, tipo y que tenga detalleCompra
+          if (data.category === 'Supermercado' && data.type === 'expense' && data.detalleCompra) {
             comprasData.push({
               id: doc.id,
               ...data
             } as CompraTransaction);
           }
         });
+        
+        // Ordenar por fecha en el cliente
+        comprasData.sort((a, b) => {
+          const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || 0);
+          const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || 0);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        console.log('Filtered compras:', comprasData.length, 'documents');
         setCompras(comprasData);
         setLoading(false);
       },
       (error) => {
         console.error('Error fetching compras:', error);
         setLoading(false);
+        // En caso de error, mostrar datos vacíos en lugar de fallar
+        setCompras([]);
       }
     );
 

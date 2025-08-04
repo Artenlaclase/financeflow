@@ -48,17 +48,66 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
     console.log('Setting up Firestore listeners for user:', user.uid);
 
-    // Obtener ingresos
+    // Obtener transacciones de la colección global 'transactions' (incluye compras de supermercado)
+    const transactionsQuery = query(
+      collection(db, 'transactions'),
+      where('userId', '==', user.uid),
+      orderBy('date', 'desc'),
+      limit(20)
+    );
+    
+    const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
+      console.log('Global transactions loaded:', snapshot.size, 'documents');
+      
+      let totalIncome = 0;
+      let totalExpenses = 0;
+      const allTransactions: Transaction[] = [];
+      
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const transaction: Transaction = {
+          id: doc.id,
+          type: data.type,
+          amount: data.amount || 0,
+          description: data.description || '',
+          category: data.category || '',
+          date: data.date
+        };
+        
+        allTransactions.push(transaction);
+        
+        if (data.type === 'income') {
+          totalIncome += data.amount || 0;
+        } else if (data.type === 'expense') {
+          totalExpenses += data.amount || 0;
+        }
+      });
+      
+      console.log('Processed transactions:', {
+        total: allTransactions.length,
+        income: totalIncome,
+        expenses: totalExpenses,
+        transactions: allTransactions
+      });
+      
+      setIncome(totalIncome);
+      setExpenses(totalExpenses);
+      setRecentTransactions(allTransactions.slice(0, 10));
+    }, (error) => {
+      console.error('Error fetching transactions:', error);
+      // En caso de error, mantener datos existentes
+    });
+
+    // Obtener ingresos (mantener para compatibilidad con datos existentes)
     const incomeQuery = query(
       collection(db, 'users', user.uid, 'income'),
       orderBy('date', 'desc'),
       limit(10)
     );
     const unsubscribeIncome = onSnapshot(incomeQuery, (snapshot) => {
-      const total = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
-      setIncome(total);
+      const legacyIncomeTotal = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
       
-      // Crear array de transacciones de ingresos
+      // Crear array de transacciones de ingresos legacy
       const incomeTransactions = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -71,21 +120,36 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         };
       });
       
-      console.log('Income transactions loaded:', incomeTransactions);
-      updateRecentTransactions(incomeTransactions, 'income');
+      console.log('Legacy income transactions loaded:', incomeTransactions);
+      
+      // Solo actualizar si hay transacciones legacy
+      if (incomeTransactions.length > 0) {
+        setIncome(prev => prev + legacyIncomeTotal);
+        setRecentTransactions(prev => {
+          const combined = [...prev, ...incomeTransactions];
+          return combined
+            .sort((a, b) => {
+              const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || Date.now());
+              const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || Date.now());
+              return dateB.getTime() - dateA.getTime();
+            })
+            .slice(0, 10);
+        });
+      }
+    }, (error) => {
+      console.log('Legacy income query error (expected if no legacy data):', error);
     });
 
-    // Obtener gastos
+    // Obtener gastos (mantener para compatibilidad con datos existentes)
     const expensesQuery = query(
       collection(db, 'users', user.uid, 'expenses'),
       orderBy('date', 'desc'),
       limit(10)
     );
     const unsubscribeExpenses = onSnapshot(expensesQuery, (snapshot) => {
-      const total = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
-      setExpenses(total);
+      const legacyExpensesTotal = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
       
-      // Crear array de transacciones de gastos
+      // Crear array de transacciones de gastos legacy
       const expenseTransactions = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -98,8 +162,24 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         };
       });
       
-      console.log('Expense transactions loaded:', expenseTransactions);
-      updateRecentTransactions(expenseTransactions, 'expense');
+      console.log('Legacy expense transactions loaded:', expenseTransactions);
+      
+      // Solo actualizar si hay transacciones legacy
+      if (expenseTransactions.length > 0) {
+        setExpenses(prev => prev + legacyExpensesTotal);
+        setRecentTransactions(prev => {
+          const combined = [...prev, ...expenseTransactions];
+          return combined
+            .sort((a, b) => {
+              const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || Date.now());
+              const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || Date.now());
+              return dateB.getTime() - dateA.getTime();
+            })
+            .slice(0, 10);
+        });
+      }
+    }, (error) => {
+      console.log('Legacy expenses query error (expected if no legacy data):', error);
     });
 
     // Obtener deudas
@@ -109,9 +189,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     );
     const unsubscribeDebts = onSnapshot(debtsQuery, (snapshot) => {
       setDebts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.log('Debts query error (expected if no debts data):', error);
     });
 
     return () => {
+      unsubscribeTransactions();
       unsubscribeIncome();
       unsubscribeExpenses();
       unsubscribeDebts();

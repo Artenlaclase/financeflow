@@ -9,11 +9,15 @@ import ExpensesByCategoryChart from '../../components/features/Analytics/Expense
 import MonthlyTrendChart from '../../components/features/Analytics/MonthlyTrendChart';
 import AnnualOverviewChart from '../../components/features/Analytics/AnnualOverviewChart';
 import AnalyticsSummary from '../../components/features/Analytics/AnalyticsSummary';
+import { useAnalytics } from '../../hooks/useAnalyticsSimplified';
 
 export default function AnalyticsPage() {
   const router = useRouter();
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  
+  // Usar el hook de analytics
+  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear);
 
   const handleBackToDashboard = () => {
     router.push('/dashboard');
@@ -52,6 +56,30 @@ export default function AnalyticsPage() {
             </Typography>
           </Box>
         </Box>
+
+        {/* Debug info */}
+        {error && (
+          <Card sx={{ mb: 4, bgcolor: 'error.light' }}>
+            <CardContent>
+              <Typography variant="h6" color="error">
+                Error en Analytics
+              </Typography>
+              <Typography variant="body2" color="error">
+                {error}
+              </Typography>
+            </CardContent>
+          </Card>
+        )}
+        
+        {loading && (
+          <Card sx={{ mb: 4, bgcolor: 'info.light' }}>
+            <CardContent>
+              <Typography variant="h6">
+                Cargando datos de análisis...
+              </Typography>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Controles de filtro */}
         <Card sx={{ mb: 4 }}>

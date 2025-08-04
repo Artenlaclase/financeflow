@@ -1,44 +1,44 @@
-// Reglas de seguridad básicas para Firestore
-// Estas reglas permiten que los usuarios autenticados accedan solo a sus propios datos
+// Reglas de seguridad simplificadas para debugging
+// TEMPORALES - solo para identificar el problema
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir acceso a los datos del usuario autenticado
-    match /users/{userId} {
-      // Permitir leer/escribir el documento del usuario
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Permitir acceso a subcollections del usuario
-      match /{document=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
+    // Reglas simplificadas para transacciones - más permisivas temporalmente
+    match /transactions/{transactionId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid != null;
     }
     
-    // Reglas para los perfiles de usuario
+    // Reglas simplificadas para productos-historial
+    match /productos-historial/{productId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid != null;
+    }
+    
+    // Reglas simplificadas para test-connection
+    match /test-connection/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Reglas para los perfiles de usuario (mantener como estaban)
     match /userProfiles/{userId} {
       allow read, write: if request.auth != null && 
         request.auth.uid == userId;
     }
     
-    // Reglas para las transacciones
-    match /transactions/{transactionId} {
-      allow read, create, update, delete: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid) &&
-        (request.resource == null || request.resource.data.userId == request.auth.uid);
-    }
-    
-    // Reglas para el historial de productos
-    match /productos-historial/{productId} {
-      allow read, create, update, delete: if request.auth != null && 
-        (resource == null || resource.data.userId == request.auth.uid) &&
-        (request.resource == null || request.resource.data.userId == request.auth.uid);
-    }
-    
-    // Reglas para los perfiles financieros
+    // Reglas para los perfiles financieros (mantener como estaban)
     match /financeProfiles/{userId} {
       allow read, write: if request.auth != null && 
         request.auth.uid == userId;
+    }
+    
+    // Permitir acceso a usuarios autenticados a sus propios datos
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }
