@@ -149,9 +149,34 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         };
       });
 
+      // Obtener compras de supermercado desde transactions
+      const comprasQuery = query(
+        collection(db, 'transactions'),
+        where('userId', '==', user.uid),
+        where('category', '==', 'Supermercado'),
+        where('type', '==', 'expense'),
+        where('date', '>=', startDate),
+        where('date', '<=', endDate),
+        orderBy('date', 'desc')
+      );
+      const comprasSnapshot = await getDocs(comprasQuery);
+      const comprasData = comprasSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          amount: data.amount || 0,
+          category: 'Supermercado',
+          description: data.description || `Compra en ${data.detalleCompra?.supermercado || 'supermercado'}`,
+          date: data.date.toDate()
+        };
+      });
+
+      // Combinar gastos regulares con compras de supermercado
+      const allExpensesData = [...expensesData, ...comprasData];
+
       // Calcular totales incluyendo datos del perfil financiero
       const transactionIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
-      const transactionExpenses = expensesData.reduce((sum, item) => sum + item.amount, 0);
+      const transactionExpenses = allExpensesData.reduce((sum, item) => sum + item.amount, 0);
       
       // Calcular cuántos meses están incluidos en el período para los gastos/ingresos fijos
       const incomeMonthsInPeriod = calculateMonthsInPeriod(
@@ -180,7 +205,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
 
       // Gastos por categoría incluyendo gastos fijos
       const expensesByCategory: { [key: string]: number } = {};
-      expensesData.forEach(expense => {
+      allExpensesData.forEach(expense => {
         const category = expense.category || 'Sin categoría';
         expensesByCategory[category] = (expensesByCategory[category] || 0) + expense.amount;
       });
@@ -223,7 +248,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
 
       monthsToInclude.forEach(monthIndex => {
         const monthIncomes = incomeData.filter(item => item.date.getMonth() === monthIndex);
-        const monthExpenses = expensesData.filter(item => item.date.getMonth() === monthIndex);
+        const monthExpenses = allExpensesData.filter(item => item.date.getMonth() === monthIndex);
         
         const monthTransactionIncomeTotal = monthIncomes.reduce((sum, item) => sum + item.amount, 0);
         const monthTransactionExpenseTotal = monthExpenses.reduce((sum, item) => sum + item.amount, 0);
@@ -250,7 +275,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         balance,
         expensesByCategory,
         monthlyData,
-        transactionCount: incomeData.length + expensesData.length,
+        transactionCount: incomeData.length + allExpensesData.length,
         fixedIncomeTotal: fixedIncomeForPeriod,
         fixedExpensesTotal: fixedExpensesForPeriod,
         transactionIncomeTotal: transactionIncome,

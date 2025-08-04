@@ -16,7 +16,13 @@ import {
   Divider,
   Grid,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  DialogContentText
 } from '@mui/material';
 import { 
   ExpandMore, 
@@ -25,47 +31,31 @@ import {
   Store, 
   LocationOn, 
   Scale,
-  Receipt
+  Receipt,
+  Edit,
+  Delete,
+  LocalDrink
 } from '@mui/icons-material';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
 import { useAuth } from '../../../contexts/AuthContext';
+import EditarCompraForm from '../Forms/EditarCompraForm';
+import { CompraTransaction } from '../../../types/compras';
 
 interface HistorialComprasProps {
   refreshTrigger: number;
-}
-
-interface CompraDetalle {
-  supermercado: string;
-  ubicacion: string;
-  metodoPago?: string;
-  productos: Array<{
-    id: string;
-    nombre: string;
-    precio: number;
-    cantidad: number;
-    porPeso: boolean;
-    precioKilo?: number;
-    peso?: number;
-    total: number;
-  }>;
-  totalProductos: number;
-  totalCompra: number;
-}
-
-interface CompraTransaction {
-  id: string;
-  amount: number;
-  description: string;
-  date: any;
-  detalleCompra: CompraDetalle;
-  createdAt: any;
 }
 
 export default function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
   const [compras, setCompras] = useState<CompraTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  
+  // Estados para edición y borrado
+  const [compraABorrar, setCompraABorrar] = useState<CompraTransaction | null>(null);
+  const [compraAEditar, setCompraAEditar] = useState<CompraTransaction | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [editFormOpen, setEditFormOpen] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -176,6 +166,70 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
       gastoUltimoMes: comprasUltimoMes.reduce((sum, compra) => sum + compra.amount, 0),
       porMetodoPago
     };
+  };
+
+  // Funciones para editar y borrar compras
+  const handleEditarCompra = (compra: CompraTransaction) => {
+    setCompraAEditar(compra);
+    setEditFormOpen(true);
+  };
+
+  const handleBorrarCompra = (compra: CompraTransaction) => {
+    setCompraABorrar(compra);
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmarBorrado = async () => {
+    if (!compraABorrar || !user) return;
+    
+    try {
+      console.log('🗑️ Iniciando borrado de compra:', compraABorrar.id);
+      
+      // 1. Borrar todos los productos del historial asociados a esta transacción
+      const productosQuery = query(
+        collection(db, 'users', user.uid, 'productos-historial'),
+        where('transactionId', '==', compraABorrar.id)
+      );
+      
+      const productosSnapshot = await getDocs(productosQuery);
+      console.log(`📦 Encontrados ${productosSnapshot.size} productos para borrar`);
+      
+      // Borrar cada producto del historial
+      const borrarProductosPromises = productosSnapshot.docs.map(docSnapshot => 
+        deleteDoc(doc(db, 'users', user.uid, 'productos-historial', docSnapshot.id))
+      );
+      
+      await Promise.all(borrarProductosPromises);
+      console.log('✅ Productos del historial borrados exitosamente');
+      
+      // 2. Borrar la transacción principal
+      await deleteDoc(doc(db, 'transactions', compraABorrar.id));
+      console.log('✅ Transacción principal borrada exitosamente');
+      
+      console.log('🎉 Compra eliminada completamente');
+      
+      setConfirmDeleteOpen(false);
+      setCompraABorrar(null);
+    } catch (error) {
+      console.error('❌ Error al borrar compra:', error);
+      // TODO: Mostrar mensaje de error al usuario
+    }
+  };
+
+  const guardarEdicion = async (compraEditada: CompraTransaction) => {
+    try {
+      console.log('💾 Compra editada exitosamente:', compraEditada.id);
+      
+      // Actualizar la lista local de compras
+      setCompras(compras.map(compra => 
+        compra.id === compraEditada.id ? compraEditada : compra
+      ));
+      
+      setEditFormOpen(false);
+      setCompraAEditar(null);
+    } catch (error) {
+      console.error('Error al procesar la edición:', error);
+    }
   };
 
   if (loading) {
@@ -358,9 +412,34 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                           {compra.detalleCompra.totalProductos} productos
                         </Typography>
                       </Box>
-                      <IconButton>
-                        {expandedCards.has(compra.id) ? <ExpandLess /> : <ExpandMore />}
-                      </IconButton>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <IconButton 
+                          size="small"
+                          color="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditarCompra(compra);
+                          }}
+                          title="Editar compra"
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                        <IconButton 
+                          size="small"
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBorrarCompra(compra);
+                          }}
+                          title="Borrar compra"
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                        <IconButton onClick={() => toggleExpanded(compra.id)}>
+                          {expandedCards.has(compra.id) ? <ExpandLess /> : <ExpandMore />}
+                        </IconButton>
+                      </Box>
                     </Box>
                   </Box>
 
@@ -399,6 +478,11 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                                     <Chip size="small" icon={<Scale />} label={`${producto.peso}kg`} />
                                     <Chip size="small" label={`$${producto.precioKilo}/kg`} />
                                   </>
+                                ) : producto.porLitro ? (
+                                  <>
+                                    <Chip size="small" icon={<LocalDrink />} label={`${producto.litros}L`} />
+                                    <Chip size="small" label={`$${producto.precioLitro}/L`} />
+                                  </>
                                 ) : (
                                   <>
                                     <Chip size="small" label={`Cantidad: ${producto.cantidad}`} />
@@ -418,6 +502,73 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
           </Box>
         )}
       </Paper>
+
+      {/* Diálogo de confirmación para borrar */}
+      <Dialog
+        open={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          🗑️ Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            ¿Estás seguro de que quieres eliminar esta compra?
+          </DialogContentText>
+          {compraABorrar && (
+            <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                <strong>{compraABorrar.detalleCompra.supermercado}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                📍 {compraABorrar.detalleCompra.ubicacion}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                📅 {formatFecha(compraABorrar.date)}
+              </Typography>
+              <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
+                💰 ${compraABorrar.amount.toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                🛍️ {compraABorrar.detalleCompra.totalProductos} productos
+              </Typography>
+            </Box>
+          )}
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <strong>Esta acción no se puede deshacer.</strong> Se eliminará tanto la transacción principal como todos los productos asociados del historial de precios.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setConfirmDeleteOpen(false)}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={confirmarBorrado}
+            variant="contained"
+            color="error"
+            startIcon={<Delete />}
+          >
+            Eliminar Compra
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* TODO: Diálogo de edición - Se implementará en el siguiente paso */}
+      <EditarCompraForm
+        open={editFormOpen}
+        compra={compraAEditar}
+        onClose={() => {
+          setEditFormOpen(false);
+          setCompraAEditar(null);
+        }}
+        onSave={guardarEdicion}
+      />
+      
     </Box>
   );
 }
