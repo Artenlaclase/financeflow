@@ -164,6 +164,17 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       total: calcularTotalProducto()
     };
 
+    console.log('🔍 DEBUG: Producto creado:', {
+      tipo: nuevoProducto.porPeso ? 'Por peso' : nuevoProducto.porLitro ? 'Por litro' : 'Por unidad',
+      porPeso: producto.porPeso,
+      porLitro: producto.porLitro,
+      precio: producto.precio,
+      cantidad: producto.cantidad,
+      precioLitro: producto.precioLitro,
+      litros: producto.litros,
+      total: producto.total
+    });
+
     setProductos([...productos, producto]);
     setNuevoProducto({
       nombre: '',
@@ -222,6 +233,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
 
     // Validar que todos los productos tengan datos válidos
     console.log('🔍 Validando productos:', productosValidos);
+    console.log('🔍 Cantidad de productos por tipo:', {
+      porPeso: productosValidos.filter(p => p.porPeso).length,
+      porLitro: productosValidos.filter(p => p.porLitro).length,
+      porUnidad: productosValidos.filter(p => !p.porPeso && !p.porLitro).length
+    });
     
     const productosInvalidos = productosValidos.filter(p => {
       const nombreVacio = !p.nombre.trim();
@@ -253,7 +269,8 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
           precioInvalido,
           cantidadInvalida,
           totalInvalido,
-          esPorPeso: p.porPeso
+          esPorPeso: p.porPeso,
+          esPorLitro: p.porLitro
         });
       }
       

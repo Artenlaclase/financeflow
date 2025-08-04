@@ -371,9 +371,9 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                     </Typography>
                     
                     <List dense>
-                      {compra.detalleCompra.productos.map((producto) => (
+                      {compra.detalleCompra.productos.map((producto, index) => (
                         <ListItem 
-                          key={producto.id}
+                          key={`${compra.id}-producto-${index}`}
                           sx={{ 
                             border: '1px solid', 
                             borderColor: 'divider', 
