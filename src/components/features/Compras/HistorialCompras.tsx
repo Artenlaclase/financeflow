@@ -187,7 +187,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
       
       // 1. Borrar todos los productos del historial asociados a esta transacción
       const productosQuery = query(
-        collection(db, 'users', user.uid, 'productos-historial'),
+        collection(db, 'productos-historial'),
         where('transactionId', '==', compraABorrar.id)
       );
       
@@ -196,7 +196,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
       
       // Borrar cada producto del historial
       const borrarProductosPromises = productosSnapshot.docs.map(docSnapshot => 
-        deleteDoc(doc(db, 'users', user.uid, 'productos-historial', docSnapshot.id))
+        deleteDoc(doc(db, 'productos-historial', docSnapshot.id))
       );
       
       await Promise.all(borrarProductosPromises);
