@@ -23,7 +23,7 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
-import { Add, Delete, ShoppingCart, Scale } from '@mui/icons-material';
+import { Add, Delete, ShoppingCart, Scale, LocalDrink } from '@mui/icons-material';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -41,8 +41,11 @@ interface ProductoCompra {
   precio: number;
   cantidad: number;
   porPeso: boolean;
+  porLitro: boolean;
   precioKilo?: number;
+  precioLitro?: number;
   peso?: number;
+  litros?: number;
   total: number;
 }
 
@@ -92,8 +95,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     precio: '',
     cantidad: '',
     porPeso: false,
+    porLitro: false,
     precioKilo: '',
-    peso: ''
+    precioLitro: '',
+    peso: '',
+    litros: ''
   });
 
   const { user } = useAuth();
@@ -104,6 +110,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       const precioKilo = parseFloat(nuevoProducto.precioKilo) || 0;
       const peso = parseFloat(nuevoProducto.peso) || 0;
       const total = precioKilo * peso;
+      return Math.round(total); // Redondear al peso más cercano
+    } else if (nuevoProducto.porLitro) {
+      const precioLitro = parseFloat(nuevoProducto.precioLitro) || 0;
+      const litros = parseFloat(nuevoProducto.litros) || 0;
+      const total = precioLitro * litros;
       return Math.round(total); // Redondear al peso más cercano
     } else {
       const precio = parseFloat(nuevoProducto.precio) || 0;
@@ -123,6 +134,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         setError('Para productos por peso, ingresa el precio por kilo y el peso');
         return;
       }
+    } else if (nuevoProducto.porLitro) {
+      if (!nuevoProducto.precioLitro || !nuevoProducto.litros) {
+        setError('Para productos por litro, ingresa el precio por litro y los litros');
+        return;
+      }
     } else {
       if (!nuevoProducto.precio || !nuevoProducto.cantidad) {
         setError('Ingresa el precio y la cantidad del producto');
@@ -133,11 +149,18 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     const producto: ProductoCompra = {
       id: Date.now().toString(),
       nombre: nuevoProducto.nombre,
-      precio: nuevoProducto.porPeso ? parseFloat(nuevoProducto.precioKilo) : parseFloat(nuevoProducto.precio),
-      cantidad: nuevoProducto.porPeso ? parseFloat(nuevoProducto.peso) : parseFloat(nuevoProducto.cantidad),
+      precio: nuevoProducto.porPeso ? parseFloat(nuevoProducto.precioKilo) : 
+              nuevoProducto.porLitro ? parseFloat(nuevoProducto.precioLitro) : 
+              parseFloat(nuevoProducto.precio),
+      cantidad: nuevoProducto.porPeso ? parseFloat(nuevoProducto.peso) : 
+                nuevoProducto.porLitro ? parseFloat(nuevoProducto.litros) : 
+                parseFloat(nuevoProducto.cantidad),
       porPeso: nuevoProducto.porPeso,
+      porLitro: nuevoProducto.porLitro,
       precioKilo: nuevoProducto.porPeso ? parseFloat(nuevoProducto.precioKilo) : undefined,
+      precioLitro: nuevoProducto.porLitro ? parseFloat(nuevoProducto.precioLitro) : undefined,
       peso: nuevoProducto.porPeso ? parseFloat(nuevoProducto.peso) : undefined,
+      litros: nuevoProducto.porLitro ? parseFloat(nuevoProducto.litros) : undefined,
       total: calcularTotalProducto()
     };
 
@@ -147,8 +170,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       precio: '',
       cantidad: '',
       porPeso: false,
+      porLitro: false,
       precioKilo: '',
-      peso: ''
+      precioLitro: '',
+      peso: '',
+      litros: ''
     });
     setError('');
   };
@@ -202,6 +228,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       const totalInvalido = isNaN(p.total) || p.total <= 0;
       
       // Para productos por peso, validar precioKilo y peso
+      // Para productos por litro, validar precioLitro y litros
       // Para productos por unidad, validar precio y cantidad
       let precioInvalido = false;
       let cantidadInvalida = false;
@@ -209,6 +236,9 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       if (p.porPeso) {
         precioInvalido = !p.precioKilo || isNaN(p.precioKilo) || p.precioKilo <= 0;
         cantidadInvalida = !p.peso || isNaN(p.peso) || p.peso <= 0;
+      } else if (p.porLitro) {
+        precioInvalido = !p.precioLitro || isNaN(p.precioLitro) || p.precioLitro <= 0;
+        cantidadInvalida = !p.litros || isNaN(p.litros) || p.litros <= 0;
       } else {
         precioInvalido = isNaN(p.precio) || p.precio <= 0;
         cantidadInvalida = isNaN(p.cantidad) || p.cantidad <= 0;
@@ -271,9 +301,12 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
             precio: Number(p.precio) || 0,
             cantidad: Number(p.cantidad) || 0,
             porPeso: Boolean(p.porPeso),
+            porLitro: Boolean(p.porLitro),
             total: Number(p.total) || 0,
             ...(p.porPeso && p.precioKilo && { precioKilo: Number(p.precioKilo) }),
-            ...(p.porPeso && p.peso && { peso: Number(p.peso) })
+            ...(p.porPeso && p.peso && { peso: Number(p.peso) }),
+            ...(p.porLitro && p.precioLitro && { precioLitro: Number(p.precioLitro) }),
+            ...(p.porLitro && p.litros && { litros: Number(p.litros) })
           }))
         },
         createdAt: Timestamp.now()
@@ -305,10 +338,13 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
             ubicacion: ubicacion || '',
             fecha: fechaCompra,
             porPeso: Boolean(producto.porPeso),
+            porLitro: Boolean(producto.porLitro),
             precio: Number(producto.precio) || 0,
             cantidad: Number(producto.cantidad) || 0,
             precioKilo: producto.precioKilo ? Number(producto.precioKilo) : null,
             peso: producto.peso ? Number(producto.peso) : null,
+            precioLitro: producto.precioLitro ? Number(producto.precioLitro) : null,
+            litros: producto.litros ? Number(producto.litros) : null,
             total: Number(producto.total) || 0,
             metodoPago: metodoPago || '',
             createdAt: Timestamp.now()
@@ -349,8 +385,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         precio: '',
         cantidad: '',
         porPeso: false,
+        porLitro: false,
         precioKilo: '',
-        peso: ''
+        precioLitro: '',
+        peso: '',
+        litros: ''
       });
 
     } catch (error: any) {
@@ -383,9 +422,12 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
               precio: Number(p.precio) || 0,
               cantidad: Number(p.cantidad) || 0,
               porPeso: Boolean(p.porPeso),
+              porLitro: Boolean(p.porLitro),
               total: Number(p.total) || 0,
               ...(p.porPeso && p.precioKilo && { precioKilo: Number(p.precioKilo) }),
-              ...(p.porPeso && p.peso && { peso: Number(p.peso) })
+              ...(p.porPeso && p.peso && { peso: Number(p.peso) }),
+              ...(p.porLitro && p.precioLitro && { precioLitro: Number(p.precioLitro) }),
+              ...(p.porLitro && p.litros && { litros: Number(p.litros) })
             }))
           },
           createdAt: Timestamp.now()
@@ -415,8 +457,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
           precio: '',
           cantidad: '',
           porPeso: false,
+          porLitro: false,
           precioKilo: '',
-          peso: ''
+          precioLitro: '',
+          peso: '',
+          litros: ''
         });
         
         return; // Salir exitosamente
@@ -548,7 +593,10 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                         precio: '',
                         cantidad: '',
                         precioKilo: '',
-                        peso: ''
+                        peso: '',
+                        porLitro: false,
+                        precioLitro: '',
+                        litros: ''
                       })}
                     />
                   }
@@ -556,6 +604,33 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <Scale fontSize="small" />
                       Por peso
+                    </Box>
+                  }
+                />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={nuevoProducto.porLitro}
+                      onChange={(e) => setNuevoProducto({ 
+                        ...nuevoProducto, 
+                        porLitro: e.target.checked,
+                        precio: '',
+                        cantidad: '',
+                        precioLitro: '',
+                        litros: '',
+                        porPeso: false,
+                        precioKilo: '',
+                        peso: ''
+                      })}
+                    />
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <LocalDrink fontSize="small" />
+                      Por litro
                     </Box>
                   }
                 />
@@ -582,6 +657,30 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                       value={nuevoProducto.peso}
                       onChange={(e) => setNuevoProducto({ ...nuevoProducto, peso: e.target.value })}
                       InputProps={{ endAdornment: 'kg' }}
+                    />
+                  </Grid>
+                </>
+              ) : nuevoProducto.porLitro ? (
+                <>
+                  <Grid item xs={6} md={2}>
+                    <TextField
+                      fullWidth
+                      label="Precio por litro"
+                      type="number"
+                      value={nuevoProducto.precioLitro}
+                      onChange={(e) => setNuevoProducto({ ...nuevoProducto, precioLitro: e.target.value })}
+                      InputProps={{ startAdornment: '$' }}
+                    />
+                  </Grid>
+                  <Grid item xs={6} md={2}>
+                    <TextField
+                      fullWidth
+                      label="Litros"
+                      type="number"
+                      inputProps={{ step: 0.01 }}
+                      value={nuevoProducto.litros}
+                      onChange={(e) => setNuevoProducto({ ...nuevoProducto, litros: e.target.value })}
+                      InputProps={{ endAdornment: 'L' }}
                     />
                   </Grid>
                 </>
@@ -663,6 +762,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                           <>
                             <Chip size="small" label={`${producto.peso}kg`} />
                             <Chip size="small" label={`$${producto.precioKilo}/kg`} />
+                          </>
+                        ) : producto.porLitro ? (
+                          <>
+                            <Chip size="small" label={`${producto.litros}L`} />
+                            <Chip size="small" label={`$${producto.precioLitro}/L`} />
                           </>
                         ) : (
                           <>

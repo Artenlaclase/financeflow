@@ -14,10 +14,13 @@ interface ProductoHistorial {
   ubicacion: string;        // Comuna
   fecha: Date;              // Fecha de compra
   porPeso: boolean;         // Si se vende por peso
+  porLitro: boolean;        // 🆕 Si se vende por litro
   precio: number;           // Precio unitario
   cantidad: number;         // Cantidad comprada
   precioKilo?: number;      // Precio por kilo (si aplica)
   peso?: number;            // Peso comprado (si aplica)
+  precioLitro?: number;     // 🆕 Precio por litro (si aplica)
+  litros?: number;          // 🆕 Litros comprados (si aplica)
   total: number;            // Total pagado por este producto
   metodoPago: string;       // Cómo se pagó
   createdAt: Date;          // Timestamp de creación
@@ -28,6 +31,24 @@ interface ProductoHistorial {
 Se agregó una segunda pestaña en la página de compras:
 - 🧾 **Pestaña 1:** Historial de Compras (existente)
 - 📈 **Pestaña 2:** Historial de Precios (NUEVO)
+
+### 🏷️ **Tipos de Productos Soportados**
+El sistema ahora maneja tres tipos de productos:
+
+1. **📦 Por Unidad (Unitarios):**
+   - Campos: `precio`, `cantidad`
+   - Ejemplos: Pan (unidades), Huevos (docenas), Yogurt (potes)
+   - Cálculo: `total = precio × cantidad`
+
+2. **⚖️ Por Peso (Kilogramos):**
+   - Campos: `precioKilo`, `peso`, `porPeso: true`
+   - Ejemplos: Carne, Frutas, Verduras, Queso
+   - Cálculo: `total = precioKilo × peso`
+
+3. **🥛 Por Litro (Volumen):**
+   - Campos: `precioLitro`, `litros`, `porLitro: true`
+   - Ejemplos: Leche, Aceite, Jugos, Bebidas
+   - Cálculo: `total = precioLitro × litros`
 
 ## 🔍 **Características del Historial de Precios**
 
@@ -67,7 +88,27 @@ Se agregó una segunda pestaña en la página de compras:
 - 🔄 **Productos recurrentes:** Trackear productos que compras seguido
 - 📋 **Histórico personal:** Tu propio índice de precios
 
-## 🛠️ **Implementación Técnica**
+## � **Compatibilidad con Datos Existentes**
+
+### **Migración Automática:**
+- ✅ **Datos anteriores:** Siguen funcionando sin problemas
+- 🔧 **Campos nuevos:** Se agregan solo a productos nuevos
+- 📊 **Retrocompatibilidad:** El sistema maneja campos faltantes
+- 🚀 **Sin interrupciones:** No requiere migración manual
+
+### **Identificación de Tipos:**
+```typescript
+// Producto por unidad (antiguo y nuevo)
+{ porPeso: false, porLitro: false } → Unitario
+
+// Producto por peso (antiguo y nuevo)  
+{ porPeso: true, porLitro: false } → Por kilogramo
+
+// Producto por litro (solo nuevo)
+{ porPeso: false, porLitro: true } → Por litro
+```
+
+## �🛠️ **Implementación Técnica**
 
 ### **Guardado Automático:**
 1. **Usuario registra compra** con productos
@@ -99,7 +140,12 @@ Resultado:
 
 ### **Scenario 2: Tendencia de Productos**
 ```
-Producto: Manzanas
+Producto: Aceite (por litro)
+- 03/ago: $3.200/L (Jumbo) - Crédito ↗️ +$150
+- 28/jul: $3.050/L (La Foresta) - Efectivo 
+- 20/jul: $2.890/L (Jumbo) - Débito
+
+Producto: Manzanas (por peso)
 - 03/ago: $2.890/kg (Jumbo) - Crédito
 - 28/jul: $2.650/kg (La Foresta) - Efectivo ↗️ +$240
 - 20/jul: $2.400/kg (Jumbo) - Débito
