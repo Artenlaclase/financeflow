@@ -70,6 +70,10 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const createProfile = async (data: Omit<UserProfile, 'userId' | 'createdAt' | 'updatedAt'>) => {
     if (!user) throw new Error('No user authenticated');
 
+    console.log('👤 UserProfileContext.createProfile iniciado');
+    console.log('Usuario:', user.uid);
+    console.log('Datos recibidos:', data);
+
     setLoading(true);
     try {
       const now = new Date();
@@ -80,13 +84,20 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
         updatedAt: now
       };
 
+      console.log('Perfil de usuario a guardar:', profileData);
+      console.log('Guardando en documento:', `userProfiles/${user.uid}`);
+
       await setDoc(doc(db, 'userProfiles', user.uid), profileData);
+      console.log('✅ Perfil de usuario guardado exitosamente');
+      
       setProfile(profileData);
+      console.log('✅ Estado local del perfil actualizado');
     } catch (error) {
-      console.error('Error creating user profile:', error);
+      console.error('❌ Error creating user profile:', error);
       throw error;
     } finally {
       setLoading(false);
+      console.log('🏁 createProfile de usuario finalizado');
     }
   };
 

@@ -47,15 +47,28 @@ export default function RegisterForm() {
     }
     
     try {
+      console.log('🔄 Iniciando proceso de registro...');
+      console.log('Email:', email);
+      console.log('Nombre:', firstName.trim());
+      console.log('Apellido:', lastName.trim());
+      
+      console.log('📝 Registrando usuario en Firebase Auth...');
       await register(email, password);
+      console.log('✅ Usuario registrado en Firebase Auth exitosamente');
+      
       // Crear el perfil de usuario con nombre y apellido
+      console.log('👤 Creando perfil de usuario...');
       await createProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email
       });
+      console.log('✅ Perfil de usuario creado exitosamente');
+      
+      console.log('🔄 Avanzando al paso de configuración financiera...');
       setActiveStep(1); // Ir al paso de configuración financiera
     } catch (err: any) {
+      console.error('❌ Error en el proceso de registro:', err);
       setError(err.message || 'Error al registrarse');
     }
   };
