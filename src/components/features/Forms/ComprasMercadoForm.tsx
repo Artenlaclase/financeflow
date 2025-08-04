@@ -24,7 +24,7 @@ import {
   FormControlLabel
 } from '@mui/material';
 import { Add, Delete, ShoppingCart, Scale } from '@mui/icons-material';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useFinance } from '../../../contexts/FinanceContext';
@@ -133,8 +133,8 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     const producto: ProductoCompra = {
       id: Date.now().toString(),
       nombre: nuevoProducto.nombre,
-      precio: nuevoProducto.porPeso ? 0 : parseFloat(nuevoProducto.precio),
-      cantidad: nuevoProducto.porPeso ? 0 : parseFloat(nuevoProducto.cantidad),
+      precio: nuevoProducto.porPeso ? parseFloat(nuevoProducto.precioKilo) : parseFloat(nuevoProducto.precio),
+      cantidad: nuevoProducto.porPeso ? parseFloat(nuevoProducto.peso) : parseFloat(nuevoProducto.cantidad),
       porPeso: nuevoProducto.porPeso,
       precioKilo: nuevoProducto.porPeso ? parseFloat(nuevoProducto.precioKilo) : undefined,
       peso: nuevoProducto.porPeso ? parseFloat(nuevoProducto.peso) : undefined,
@@ -169,43 +169,134 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       return;
     }
 
+    // Filtrar productos válidos (no null, undefined o vacíos)
+    const productosValidos = productos.filter(p => p && typeof p === 'object' && p.nombre);
+    
+    console.log('📊 Productos en array total:', productos.length);
+    console.log('📊 Productos válidos (filtrados):', productosValidos.length);
+    
+    if (productosValidos.length === 0) {
+      setError('No hay productos válidos para guardar');
+      return;
+    }
+    
+    // Actualizar el array de productos con solo los válidos
+    if (productosValidos.length !== productos.length) {
+      console.log('🧹 Limpiando productos inválidos del array');
+      setProductos(productosValidos);
+      // Re-ejecutar la validación con productos limpios
+      setTimeout(() => handleSubmit(e), 100);
+      return;
+    }
+
+    if (!user) {
+      setError('Debes estar autenticado para guardar una compra');
+      return;
+    }
+
+    // Validar que todos los productos tengan datos válidos
+    console.log('🔍 Validando productos:', productosValidos);
+    
+    const productosInvalidos = productosValidos.filter(p => {
+      const nombreVacio = !p.nombre.trim();
+      const totalInvalido = isNaN(p.total) || p.total <= 0;
+      
+      // Para productos por peso, validar precioKilo y peso
+      // Para productos por unidad, validar precio y cantidad
+      let precioInvalido = false;
+      let cantidadInvalida = false;
+      
+      if (p.porPeso) {
+        precioInvalido = !p.precioKilo || isNaN(p.precioKilo) || p.precioKilo <= 0;
+        cantidadInvalida = !p.peso || isNaN(p.peso) || p.peso <= 0;
+      } else {
+        precioInvalido = isNaN(p.precio) || p.precio <= 0;
+        cantidadInvalida = isNaN(p.cantidad) || p.cantidad <= 0;
+      }
+      
+      const esInvalido = nombreVacio || precioInvalido || cantidadInvalida || totalInvalido;
+      
+      if (esInvalido) {
+        console.log('❌ Producto inválido encontrado:', {
+          producto: p,
+          nombreVacio,
+          precioInvalido,
+          cantidadInvalida,
+          totalInvalido,
+          esPorPeso: p.porPeso
+        });
+      }
+      
+      return esInvalido;
+    });
+
+    console.log('Total productos inválidos:', productosInvalidos.length);
+
+    if (productosInvalidos.length > 0) {
+      setError(`Hay ${productosInvalidos.length} producto(s) con datos inválidos. Revisa los precios y cantidades.`);
+      return;
+    }
+
     setLoading(true);
     setError('');
 
+    console.log('✅ Validaciones pasadas. Iniciando guardado...');
+    console.log('Usuario:', user.uid);
+    console.log('Datos de compra:', { supermercado, ubicacion, metodoPago, productos: productosValidos.length });
+    console.log('Total de la compra:', calcularTotalCompra());
+
     try {
       console.log('Iniciando guardado de compra...');
-      console.log('Productos a guardar:', productos);
+      console.log('Productos a guardar:', productosValidos);
       console.log('Usuario:', user?.uid);
 
       // Guardar la transacción principal
+      const totalCompraCalculado = productosValidos.reduce((total, producto) => total + producto.total, 0);
       const compraData = {
         type: 'expense',
         category: 'Supermercado',
-        amount: calcularTotalCompra(),
+        amount: totalCompraCalculado,
         description: `Compra en ${supermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
-        date: new Date(fecha),
+        date: Timestamp.fromDate(new Date(fecha)),
         userId: user?.uid,
         detalleCompra: {
-          supermercado,
-          ubicacion,
-          metodoPago,
-          productos,
-          totalProductos: productos.length,
-          totalCompra: calcularTotalCompra()
+          supermercado: supermercado || '',
+          ubicacion: ubicacion || '',
+          metodoPago: metodoPago || '',
+          totalProductos: productosValidos.length,
+          totalCompra: productosValidos.reduce((total, producto) => total + producto.total, 0),
+          // Simplificar productos para evitar problemas de serialización
+          productos: productosValidos.map(p => ({
+            nombre: p.nombre || '',
+            precio: Number(p.precio) || 0,
+            cantidad: Number(p.cantidad) || 0,
+            porPeso: Boolean(p.porPeso),
+            total: Number(p.total) || 0,
+            ...(p.porPeso && p.precioKilo && { precioKilo: Number(p.precioKilo) }),
+            ...(p.porPeso && p.peso && { peso: Number(p.peso) })
+          }))
         },
-        createdAt: new Date()
+        createdAt: Timestamp.now()
       };
 
       console.log('Guardando transacción principal...');
-      const transactionRef = await addDoc(collection(db, 'transactions'), compraData);
-      console.log('✅ Transacción guardada exitosamente con ID:', transactionRef.id);
+      console.log('Datos a enviar a Firestore:', compraData);
+      
+      let transactionRef;
+      try {
+        transactionRef = await addDoc(collection(db, 'transactions'), compraData);
+        console.log('✅ Transacción guardada exitosamente con ID:', transactionRef.id);
+      } catch (transactionError) {
+        console.error('❌ Error específico al guardar transacción principal:', transactionError);
+        throw transactionError; // Re-lanzar el error para que sea capturado por el catch principal
+      }
 
       // Guardar cada producto en el historial de precios solo si hay productos
-      if (productos.length > 0) {
-        console.log('Preparando productos para historial... Total productos:', productos.length);
-        const fechaCompra = new Date(fecha);
+      if (productosValidos.length > 0) {
+        console.log('Preparando productos para historial... Total productos:', productosValidos.length);
+        const fechaCompra = Timestamp.fromDate(new Date(fecha));
         
-        const productosHistorial = productos.map((producto, index) => {
+        const productosHistorial = productosValidos.map((producto, index) => {
           const productoHistorial = {
             transactionId: transactionRef.id,
             userId: user?.uid,
@@ -220,7 +311,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
             peso: producto.peso ? Number(producto.peso) : null,
             total: Number(producto.total) || 0,
             metodoPago: metodoPago || '',
-            createdAt: new Date()
+            createdAt: Timestamp.now()
           };
           console.log(`Producto ${index + 1} preparado:`, productoHistorial);
           return productoHistorial;
@@ -262,31 +353,53 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         peso: ''
       });
 
-    } catch (error) {
-      console.error('Error detallado al guardar la compra:', error);
+    } catch (error: any) {
+      console.error('❌ Error detallado al guardar la compra:', error);
+      console.error('Tipo de error:', typeof error);
+      console.error('Error code:', error?.code);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
       
       // Intentar guardar solo la transacción principal como fallback
       try {
         console.log('Intentando guardado simplificado...');
+        const totalCompraSimple = productosValidos.reduce((total, producto) => total + producto.total, 0);
         const compraDataSimple = {
           type: 'expense',
           category: 'Supermercado',
-          amount: calcularTotalCompra(),
+          amount: totalCompraSimple,
           description: `Compra en ${supermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
-          date: new Date(fecha),
+          date: Timestamp.fromDate(new Date(fecha)),
           userId: user?.uid,
           detalleCompra: {
-            supermercado,
-            ubicacion,
-            metodoPago,
-            productos,
-            totalProductos: productos.length,
-            totalCompra: calcularTotalCompra()
+            supermercado: supermercado || '',
+            ubicacion: ubicacion || '',
+            metodoPago: metodoPago || '',
+            totalProductos: productosValidos.length,
+            totalCompra: totalCompraSimple,
+            // Simplificar productos para evitar problemas de serialización
+            productos: productosValidos.map(p => ({
+              nombre: p.nombre || '',
+              precio: Number(p.precio) || 0,
+              cantidad: Number(p.cantidad) || 0,
+              porPeso: Boolean(p.porPeso),
+              total: Number(p.total) || 0,
+              ...(p.porPeso && p.precioKilo && { precioKilo: Number(p.precioKilo) }),
+              ...(p.porPeso && p.peso && { peso: Number(p.peso) })
+            }))
           },
-          createdAt: new Date()
+          createdAt: Timestamp.now()
         };
         
-        await addDoc(collection(db, 'transactions'), compraDataSimple);
+        console.log('Datos simplificados a enviar:', compraDataSimple);
+        
+        try {
+          await addDoc(collection(db, 'transactions'), compraDataSimple);
+          console.log('✅ Guardado simplificado exitoso');
+        } catch (simplifiedError) {
+          console.error('❌ Error en guardado simplificado:', simplifiedError);
+          throw simplifiedError;
+        }
         console.log('Guardado simplificado exitoso');
         refreshData();
         onComplete();
@@ -307,8 +420,12 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         });
         
         return; // Salir exitosamente
-      } catch (fallbackError) {
-        console.error('Error en guardado simplificado:', fallbackError);
+      } catch (fallbackError: any) {
+        console.error('❌ Error CRÍTICO en guardado simplificado:', fallbackError);
+        console.error('Tipo de error:', typeof fallbackError);
+        console.error('Error code:', fallbackError?.code);
+        console.error('Error message:', fallbackError?.message);
+        console.error('Error stack:', fallbackError?.stack);
       }
       
       setError('Error al guardar la compra. Intenta nuevamente.');

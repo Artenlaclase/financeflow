@@ -110,7 +110,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
     const timeout = setTimeout(() => {
       console.log('Firestore timeout - stopping loading');
       setLoading(false);
-    }, 5000);
+    }, 10000); // Aumentado de 5s a 10s
 
     return () => {
       unsubscribe();
