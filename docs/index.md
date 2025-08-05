@@ -40,6 +40,7 @@ docs/
 ### Development
 - **[Debug Guide](development/DEBUG_ERROR_COMPRAS.md)**: Debugging purchase errors
 - **[Development Log](development/DESARROLLO_LOG.md)**: Development progress and notes
+- **[Firestore Security Rules](development/FIRESTORE_SECURITY_RULES.md)**: Comprehensive security rules documentation
 
 ### Setup
 - **[Installation Guide](setup/installation.md)**: Complete installation instructions
