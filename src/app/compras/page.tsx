@@ -1,7 +1,7 @@
 "use client";
 
 import { Container, Typography, Box, Button, Grid, Tabs, Tab } from '@mui/material';
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowBack, ShoppingCart, Timeline, Receipt } from '@mui/icons-material';
 import AuthGuard from '@/components/shared/Auth/AuthGuard';
@@ -19,15 +19,21 @@ export default function ComprasPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
 
-  const handleCompraCompleta = () => {
-    setShowForm(false);
-    setShowSimpleForm(false);
-    setRefreshTrigger(prev => prev + 1);
-  };
+  // Log de debug removido temporalmente para evitar bucle infinito
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
+  // Usar useMemo para estabilizar las funciones
+  const handlers = useMemo(() => ({
+    handleCloseForm: () => setShowForm(false),
+    handleCloseSimpleForm: () => setShowSimpleForm(false),
+    handleCompraCompleta: () => {
+      setShowForm(false);
+      setShowSimpleForm(false);
+      setRefreshTrigger(prev => prev + 1);
+    },
+    handleTabChange: (event: React.SyntheticEvent, newValue: number) => {
+      setActiveTab(newValue);
+    }
+  }), []);
 
   return (
     <AuthGuard requireAuth={true} requireFinanceSetup={true}>
@@ -73,7 +79,7 @@ export default function ComprasPage() {
 
         {/* Tabs Navigation */}
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={activeTab} onChange={handleTabChange}>
+          <Tabs value={activeTab} onChange={handlers.handleTabChange}>
             <Tab 
               icon={<Receipt />} 
               label="Historial de Compras" 
@@ -108,15 +114,15 @@ export default function ComprasPage() {
         {/* Formulario de nueva compra */}
         <ComprasMercadoForm
           open={showForm}
-          onClose={() => setShowForm(false)}
-          onComplete={handleCompraCompleta}
+          onClose={handlers.handleCloseForm}
+          onComplete={handlers.handleCompraCompleta}
         />
         
         {/* Formulario simple de prueba */}
         <CompraSimpleForm
           open={showSimpleForm}
-          onClose={() => setShowSimpleForm(false)}
-          onComplete={handleCompraCompleta}
+          onClose={handlers.handleCloseSimpleForm}
+          onComplete={handlers.handleCompraCompleta}
         />
       </Container>
     </AuthGuard>
