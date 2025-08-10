@@ -63,7 +63,9 @@ export default function IncomeForm({ open, onClose }: IncomeFormProps) {
     }
 
     try {
-      await addDoc(collection(db, 'users', user.uid, 'income'), {
+      await addDoc(collection(db, 'transactions'), {
+        userId: user.uid,
+        type: 'income',
         amount: parseFloat(amount),
         category,
         description,

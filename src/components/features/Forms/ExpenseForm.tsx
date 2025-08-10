@@ -66,7 +66,9 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
     }
 
     try {
-      await addDoc(collection(db, 'users', user.uid, 'expenses'), {
+      await addDoc(collection(db, 'transactions'), {
+        userId: user.uid,
+        type: 'expense',
         amount: parseFloat(amount),
         category,
         description,
