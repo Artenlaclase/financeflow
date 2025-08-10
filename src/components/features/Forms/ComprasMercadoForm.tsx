@@ -38,6 +38,7 @@ interface ComprasMercadoFormProps {
 interface ProductoCompra {
   id: string;
   nombre: string;
+  marca?: string;
   precio: number;
   cantidad: number;
   porPeso: boolean;
@@ -82,6 +83,7 @@ const metodosPago = [
 
 export default function ComprasMercadoForm({ open, onClose, onComplete }: ComprasMercadoFormProps) {
   const [supermercado, setSupermercado] = useState('');
+  const [supermercadoPersonalizado, setSupermercadoPersonalizado] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [metodoPago, setMetodoPago] = useState('');
@@ -92,6 +94,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   // Estados para nuevo producto
   const [nuevoProducto, setNuevoProducto] = useState({
     nombre: '',
+    marca: '',
     precio: '',
     cantidad: '',
     porPeso: false,
@@ -149,6 +152,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     const producto: ProductoCompra = {
       id: Date.now().toString(),
       nombre: nuevoProducto.nombre,
+      marca: nuevoProducto.marca || undefined,
       precio: nuevoProducto.porPeso ? parseFloat(nuevoProducto.precioKilo) : 
               nuevoProducto.porLitro ? parseFloat(nuevoProducto.precioLitro) : 
               parseFloat(nuevoProducto.precio),
@@ -178,6 +182,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     setProductos([...productos, producto]);
     setNuevoProducto({
       nombre: '',
+      marca: '',
       precio: '',
       cantidad: '',
       porPeso: false,
@@ -208,6 +213,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     
     if (!supermercado || !ubicacion || !metodoPago || productos.length === 0) {
       const errorMsg = 'Completa todos los campos requeridos y agrega al menos un producto';
+      console.log('❌ Validación fallida:', errorMsg);
+      setError(errorMsg);
+      return;
+    }
+
+    // Validar supermercado personalizado si es necesario
+    if (supermercado === 'Otro' && !supermercadoPersonalizado.trim()) {
+      const errorMsg = 'Por favor ingresa el nombre del supermercado';
       console.log('❌ Validación fallida:', errorMsg);
       setError(errorMsg);
       return;
@@ -306,15 +319,16 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
 
       // Guardar la transacción principal
       const totalCompraCalculado = productosValidos.reduce((total, producto) => total + producto.total, 0);
+      const nombreSupermercado = supermercado === 'Otro' ? supermercadoPersonalizado : supermercado;
       const compraData = {
         type: 'expense',
         category: 'Supermercado',
         amount: totalCompraCalculado,
-        description: `Compra en ${supermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
+        description: `Compra en ${nombreSupermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
         date: Timestamp.fromDate(new Date(fecha)),
         userId: user?.uid,
         detalleCompra: {
-          supermercado: supermercado || '',
+          supermercado: nombreSupermercado || '',
           ubicacion: ubicacion || '',
           metodoPago: metodoPago || '',
           totalProductos: productosValidos.length,
@@ -322,6 +336,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
           // Simplificar productos para evitar problemas de serialización
           productos: productosValidos.map(p => ({
             nombre: p.nombre || '',
+            marca: p.marca || '',
             precio: Number(p.precio) || 0,
             cantidad: Number(p.cantidad) || 0,
             porPeso: Boolean(p.porPeso),
@@ -358,7 +373,8 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
             transactionId: transactionRef.id,
             userId: user?.uid,
             nombre: producto.nombre || '',
-            supermercado: supermercado || '',
+            marca: producto.marca || '',
+            supermercado: nombreSupermercado || '',
             ubicacion: ubicacion || '',
             fecha: fechaCompra,
             porPeso: Boolean(producto.porPeso),
@@ -400,12 +416,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       
       // Reset form
       setSupermercado('');
+      setSupermercadoPersonalizado('');
       setUbicacion('');
       setFecha(new Date().toISOString().split('T')[0]);
       setMetodoPago('');
       setProductos([]);
       setNuevoProducto({
         nombre: '',
+        marca: '',
         precio: '',
         cantidad: '',
         porPeso: false,
@@ -427,15 +445,16 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       try {
         console.log('Intentando guardado simplificado...');
         const totalCompraSimple = productosValidos.reduce((total, producto) => total + producto.total, 0);
+        const nombreSupermercado = supermercado === 'Otro' ? supermercadoPersonalizado : supermercado;
         const compraDataSimple = {
           type: 'expense',
           category: 'Supermercado',
           amount: totalCompraSimple,
-          description: `Compra en ${supermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
+          description: `Compra en ${nombreSupermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
           date: Timestamp.fromDate(new Date(fecha)),
           userId: user?.uid,
           detalleCompra: {
-            supermercado: supermercado || '',
+            supermercado: nombreSupermercado || '',
             ubicacion: ubicacion || '',
             metodoPago: metodoPago || '',
             totalProductos: productosValidos.length,
@@ -443,6 +462,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
             // Simplificar productos para evitar problemas de serialización
             productos: productosValidos.map(p => ({
               nombre: p.nombre || '',
+              marca: p.marca || '',
               precio: Number(p.precio) || 0,
               cantidad: Number(p.cantidad) || 0,
               porPeso: Boolean(p.porPeso),
@@ -472,12 +492,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         
         // Reset form
         setSupermercado('');
+        setSupermercadoPersonalizado('');
         setUbicacion('');
         setFecha(new Date().toISOString().split('T')[0]);
         setMetodoPago('');
         setProductos([]);
         setNuevoProducto({
           nombre: '',
+          marca: '',
           precio: '',
           cantidad: '',
           porPeso: false,
@@ -542,6 +564,20 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                 </FormControl>
               </Grid>
 
+              {/* Campo personalizado para supermercado */}
+              {supermercado === 'Otro' && (
+                <Grid item xs={12} md={3}>
+                  <TextField
+                    fullWidth
+                    label="Nombre del supermercado"
+                    value={supermercadoPersonalizado}
+                    onChange={(e) => setSupermercadoPersonalizado(e.target.value)}
+                    required
+                    placeholder="Ej: Supermercado Local"
+                  />
+                </Grid>
+              )}
+
               <Grid item xs={12} md={3}>
                 <FormControl fullWidth required>
                   <InputLabel>Comuna</InputLabel>
@@ -603,6 +639,17 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                   label="Nombre del producto"
                   value={nuevoProducto.nombre}
                   onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
+                  required
+                />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  fullWidth
+                  label="Marca (opcional)"
+                  value={nuevoProducto.marca}
+                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, marca: e.target.value })}
+                  placeholder="Ej: Nestlé"
                 />
               </Grid>
 
@@ -780,6 +827,11 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="body1" fontWeight="medium">
                         {producto.nombre}
+                        {producto.marca && (
+                          <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                            ({producto.marca})
+                          </Typography>
+                        )}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
                         {producto.porPeso ? (
