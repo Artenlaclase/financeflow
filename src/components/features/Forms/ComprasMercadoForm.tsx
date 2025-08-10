@@ -24,8 +24,9 @@ import {
   FormControlLabel
 } from '@mui/material';
 import { Add, Delete, ShoppingCart, Scale, LocalDrink } from '@mui/icons-material';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, Timestamp, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
+import { guardarTransaccionSimple } from '../../../lib/firebaseSimple';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useFinance } from '../../../contexts/FinanceContext';
 
@@ -108,6 +109,46 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const { user } = useAuth();
   const { refreshData } = useFinance();
 
+  // Función auxiliar para manejar el guardado con reintentos
+  const guardarConReintentos = async (data: any, maxIntentos = 3) => {
+    let ultimoError;
+    
+    for (let intento = 1; intento <= maxIntentos; intento++) {
+      try {
+        console.log(`🔄 Intento ${intento}/${maxIntentos} de guardado...`);
+        
+        // Forzar reconexión de red antes de cada intento
+        if (intento > 1) {
+          console.log('🔌 Reiniciando conexión Firestore...');
+          await disableNetwork(db);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await enableNetwork(db);
+        }
+        
+        // Intentar guardar con timeout más corto
+        const savePromise = addDoc(collection(db, 'transactions'), data);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error(`Timeout en intento ${intento}`)), 8000)
+        );
+        
+        const resultado = await Promise.race([savePromise, timeoutPromise]);
+        console.log(`✅ Guardado exitoso en intento ${intento}`);
+        return resultado;
+        
+      } catch (error: any) {
+        console.error(`❌ Error en intento ${intento}:`, error.message);
+        ultimoError = error;
+        
+        if (intento < maxIntentos) {
+          console.log(`⏳ Esperando antes del siguiente intento...`);
+          await new Promise(resolve => setTimeout(resolve, 2000 * intento));
+        }
+      }
+    }
+    
+    throw ultimoError;
+  };
+
   const calcularTotalProducto = () => {
     if (nuevoProducto.porPeso) {
       const precioKilo = parseFloat(nuevoProducto.precioKilo) || 0;
@@ -180,6 +221,18 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     });
 
     setProductos([...productos, producto]);
+    limpiarFormularioProducto();
+  };
+
+  const eliminarProducto = (id: string) => {
+    setProductos(productos.filter(p => p.id !== id));
+  };
+
+  const calcularTotalCompra = () => {
+    return productos.reduce((total, producto) => total + producto.total, 0);
+  };
+
+  const limpiarFormularioProducto = () => {
     setNuevoProducto({
       nombre: '',
       marca: '',
@@ -195,21 +248,32 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     setError('');
   };
 
-  const eliminarProducto = (id: string) => {
-    setProductos(productos.filter(p => p.id !== id));
-  };
-
-  const calcularTotalCompra = () => {
-    return productos.reduce((total, producto) => total + producto.total, 0);
+  const tieneProductoPendiente = () => {
+    return nuevoProducto.nombre.trim() !== '' || 
+           nuevoProducto.marca.trim() !== '' ||
+           nuevoProducto.precio.trim() !== '' ||
+           nuevoProducto.cantidad.trim() !== '' ||
+           nuevoProducto.precioKilo.trim() !== '' ||
+           nuevoProducto.peso.trim() !== '' ||
+           nuevoProducto.precioLitro.trim() !== '' ||
+           nuevoProducto.litros.trim() !== '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('🚀 INICIO handleSubmit');
+    console.log('🚀🚀🚀 INICIO handleSubmit - FORMULARIO ENVIADO 🚀🚀🚀');
     console.log('📋 Datos del formulario:', { supermercado, ubicacion, metodoPago, productosCount: productos.length });
     console.log('👤 Usuario:', user ? { uid: user.uid, email: user.email } : 'No autenticado');
     console.log('🔥 Firebase db object:', db);
+    
+    // VERIFICAR SI HAY UN PRODUCTO PENDIENTE DE AGREGAR
+    // Solo mostrar advertencia si hay campos llenos, pero permitir continuar
+    if (tieneProductoPendiente()) {
+      console.log('⚠️ Advertencia: Hay campos de producto sin agregar');
+      setError('Advertencia: Tienes campos de producto sin agregar. ¿Quieres continuar sin agregarlos?');
+      // No hacer return aquí - permitir que continúe el guardado
+    }
     
     if (!supermercado || !ubicacion || !metodoPago || productos.length === 0) {
       const errorMsg = 'Completa todos los campos requeridos y agrega al menos un producto';
@@ -317,52 +381,35 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       console.log('Productos a guardar:', productosValidos);
       console.log('Usuario:', user?.uid);
 
-      // Guardar la transacción principal
+      // Guardar la transacción principal con reintentos
       const totalCompraCalculado = productosValidos.reduce((total, producto) => total + producto.total, 0);
       const nombreSupermercado = supermercado === 'Otro' ? supermercadoPersonalizado : supermercado;
+      
+      // Datos ultra-simplificados para evitar cualquier problema
       const compraData = {
         type: 'expense',
         category: 'Supermercado',
         amount: totalCompraCalculado,
-        description: `Compra en ${nombreSupermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
+        description: `Compra ${nombreSupermercado} - ${ubicacion}`,
         date: Timestamp.fromDate(new Date(fecha)),
         userId: user?.uid,
-        detalleCompra: {
-          supermercado: nombreSupermercado || '',
-          ubicacion: ubicacion || '',
-          metodoPago: metodoPago || '',
-          totalProductos: productosValidos.length,
-          totalCompra: productosValidos.reduce((total, producto) => total + producto.total, 0),
-          // Simplificar productos para evitar problemas de serialización
-          productos: productosValidos.map(p => ({
-            nombre: p.nombre || '',
-            marca: p.marca || '',
-            precio: Number(p.precio) || 0,
-            cantidad: Number(p.cantidad) || 0,
-            porPeso: Boolean(p.porPeso),
-            porLitro: Boolean(p.porLitro),
-            total: Number(p.total) || 0,
-            ...(p.porPeso && p.precioKilo && { precioKilo: Number(p.precioKilo) }),
-            ...(p.porPeso && p.peso && { peso: Number(p.peso) }),
-            ...(p.porLitro && p.precioLitro && { precioLitro: Number(p.precioLitro) }),
-            ...(p.porLitro && p.litros && { litros: Number(p.litros) })
-          }))
-        },
         createdAt: Timestamp.now()
       };
 
       console.log('Guardando transacción principal...');
       console.log('Datos a enviar a Firestore:', compraData);
       
-      let transactionRef;
       try {
-        transactionRef = await addDoc(collection(db, 'transactions'), compraData);
-        console.log('✅ Transacción guardada exitosamente con ID:', transactionRef.id);
+        const transactionRef = await guardarTransaccionSimple(compraData);
+        console.log('✅ Transacción guardada exitosamente con ID:', (transactionRef as any)?.id);
       } catch (transactionError) {
-        console.error('❌ Error específico al guardar transacción principal:', transactionError);
-        throw transactionError; // Re-lanzar el error para que sea capturado por el catch principal
+        console.error('❌ Error al guardar con método simple:', transactionError);
+        throw transactionError;
       }
 
+      // Comentar temporalmente el guardado del historial para evitar problemas de índices
+      // TODO: Habilitar cuando se resuelvan los problemas de índices en Firebase
+      /*
       // Guardar cada producto en el historial de precios solo si hay productos
       if (productosValidos.length > 0) {
         console.log('Preparando productos para historial... Total productos:', productosValidos.length);
@@ -409,6 +456,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       } else {
         console.log('⚠️ No hay productos para guardar en historial');
       }
+      */
 
       console.log('🎉 Guardado completado exitosamente');
       refreshData();
@@ -441,51 +489,46 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       console.error('Error message:', error?.message);
       console.error('Error stack:', error?.stack);
       
-      // Intentar guardar solo la transacción principal como fallback
+      // Mostrar error específico al usuario
+      if (error?.message?.includes('Timeout')) {
+        setError('La operación tardó demasiado tiempo. Verifica tu conexión a internet e intenta nuevamente.');
+        setLoading(false);
+        return;
+      } else if (error?.code === 'failed-precondition' && error?.message?.includes('index')) {
+        setError('Error de configuración de base de datos. Se requiere crear un índice en Firebase. Contacta al administrador.');
+        setLoading(false);
+        return;
+      } else if (error?.code === 'permission-denied') {
+        setError('No tienes permisos para guardar esta compra. Verifica tu autenticación.');
+        setLoading(false);
+        return;
+      } else if (error?.code === 'unavailable') {
+        setError('Servicio temporalmente no disponible. Intenta nuevamente en unos minutos.');
+        setLoading(false);
+        return;
+      }
+      
+      // Intentar guardado de emergencia más simple
       try {
-        console.log('Intentando guardado simplificado...');
+        console.log('Intentando guardado de emergencia...');
         const totalCompraSimple = productosValidos.reduce((total, producto) => total + producto.total, 0);
         const nombreSupermercado = supermercado === 'Otro' ? supermercadoPersonalizado : supermercado;
-        const compraDataSimple = {
+        
+        // Datos mínimos para guardar
+        const compraDataEmergencia = {
           type: 'expense',
           category: 'Supermercado',
           amount: totalCompraSimple,
-          description: `Compra en ${nombreSupermercado} - ${ubicacion} (${metodosPago.find(m => m.value === metodoPago)?.label})`,
-          date: Timestamp.fromDate(new Date(fecha)),
+          description: `Compra ${nombreSupermercado}`,
           userId: user?.uid,
-          detalleCompra: {
-            supermercado: nombreSupermercado || '',
-            ubicacion: ubicacion || '',
-            metodoPago: metodoPago || '',
-            totalProductos: productosValidos.length,
-            totalCompra: totalCompraSimple,
-            // Simplificar productos para evitar problemas de serialización
-            productos: productosValidos.map(p => ({
-              nombre: p.nombre || '',
-              marca: p.marca || '',
-              precio: Number(p.precio) || 0,
-              cantidad: Number(p.cantidad) || 0,
-              porPeso: Boolean(p.porPeso),
-              porLitro: Boolean(p.porLitro),
-              total: Number(p.total) || 0,
-              ...(p.porPeso && p.precioKilo && { precioKilo: Number(p.precioKilo) }),
-              ...(p.porPeso && p.peso && { peso: Number(p.peso) }),
-              ...(p.porLitro && p.precioLitro && { precioLitro: Number(p.precioLitro) }),
-              ...(p.porLitro && p.litros && { litros: Number(p.litros) })
-            }))
-          },
           createdAt: Timestamp.now()
         };
         
-        console.log('Datos simplificados a enviar:', compraDataSimple);
+        console.log('Datos de emergencia a enviar:', compraDataEmergencia);
         
-        try {
-          await addDoc(collection(db, 'transactions'), compraDataSimple);
-          console.log('✅ Guardado simplificado exitoso');
-        } catch (simplifiedError) {
-          console.error('❌ Error en guardado simplificado:', simplifiedError);
-          throw simplifiedError;
-        }
+        // Un solo intento directo sin reintentos para el fallback
+        await guardarTransaccionSimple(compraDataEmergencia);
+        console.log('✅ Guardado de emergencia exitoso');
         console.log('Guardado simplificado exitoso');
         refreshData();
         onComplete();
@@ -532,11 +575,42 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         Nueva Compra de Supermercado
       </DialogTitle>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => {
+        console.log('📝 FORM onSubmit activado');
+        try {
+          handleSubmit(e);
+        } catch (error) {
+          console.error('❌ Error en handleSubmit:', error);
+        }
+      }}>
         <DialogContent>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
+            </Alert>
+          )}
+
+          {loading && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <strong>Guardando compra...</strong> Por favor espera, esto puede tardar unos segundos.
+              <br />
+              <Typography variant="caption">
+                Si la operación falla, presiona "Reconectar Firebase" antes de intentar nuevamente.
+              </Typography>
+            </Alert>
+          )}
+
+          {/* Debug info - Solo en desarrollo */}
+          {process.env.NODE_ENV === 'development' && (
+            <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
+              <strong>Debug:</strong> Estado del formulario de producto: 
+              Nombre: "{nuevoProducto.nombre}", 
+              Marca: "{nuevoProducto.marca}", 
+              Precio: "{nuevoProducto.precio}", 
+              Cantidad: "{nuevoProducto.cantidad}"
+              {(nuevoProducto.nombre || nuevoProducto.marca || nuevoProducto.precio || nuevoProducto.cantidad) && 
+                <span style={{ color: 'red' }}> ← HAY CAMPOS PENDIENTES</span>
+              }
             </Alert>
           )}
 
@@ -790,14 +864,28 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
               </Grid>
 
               <Grid item xs={6} md={1}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={agregarProducto}
-                  startIcon={<Add />}
-                >
-                  Agregar
-                </Button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Button
+                    type="button"
+                    fullWidth
+                    variant="contained"
+                    onClick={agregarProducto}
+                    startIcon={<Add />}
+                    size="small"
+                  >
+                    Agregar
+                  </Button>
+                  <Button
+                    type="button"
+                    fullWidth
+                    variant="outlined"
+                    onClick={limpiarFormularioProducto}
+                    size="small"
+                    color="secondary"
+                  >
+                    Limpiar
+                  </Button>
+                </Box>
               </Grid>
             </Grid>
           </Paper>
@@ -888,10 +976,43 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
             Cancelar
           </Button>
           <Button
+            type="button"
+            variant="outlined"
+            onClick={async () => {
+              try {
+                setError('Reconectando a Firebase...');
+                await disableNetwork(db);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await enableNetwork(db);
+                setError('');
+                console.log('✅ Reconexión completada');
+              } catch (error) {
+                console.error('❌ Error en reconexión:', error);
+                setError('Error al reconectar');
+              }
+            }}
+            disabled={loading}
+          >
+            Reconectar Firebase
+          </Button>
+          <Button
             type="submit"
             variant="contained"
-            disabled={loading || productos.length === 0}
+            disabled={
+              loading || 
+              productos.length === 0
+            }
             startIcon={<ShoppingCart />}
+            onClick={() => {
+              console.log('🖱️ CLICK en botón Guardar Compra');
+              console.log('📊 Estado actual:', {
+                loading,
+                productosLength: productos.length,
+                supermercado,
+                ubicacion,
+                metodoPago
+              });
+            }}
           >
             {loading ? 'Guardando...' : 'Guardar Compra'}
           </Button>
