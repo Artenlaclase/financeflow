@@ -190,9 +190,9 @@ export default function DashboardPage() {
             alignItems: 'center',
             mb: 3
           }}>
-            <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+            {/* <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
               Menú
-            </Typography>
+            </Typography> */}
             <IconButton
               edge="end"
               color="primary"
