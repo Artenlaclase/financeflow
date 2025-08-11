@@ -19,7 +19,12 @@ export default function QuickActions() {
       <Typography variant="h6" sx={{ mb: 2 }}>
         Acciones Rápidas
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 2, 
+        flexWrap: 'wrap',
+        justifyContent: { xs: 'center', sm: 'flex-start' }
+      }}>
         <Button
           variant="contained"
           startIcon={<Add />}
