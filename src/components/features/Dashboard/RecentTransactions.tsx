@@ -23,6 +23,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { deleteTransaction, Transaction } from '../../../lib/firebaseUtils';
 import ConfirmationDialog from '../../shared/ConfirmationDialog';
 import EditTransactionDialog from './EditTransactionDialog';
+import { formatDateForDisplay } from '../../../lib/dateUtils';
 
 export default function RecentTransactions() {
   const { recentTransactions } = useFinance();
@@ -85,13 +86,7 @@ export default function RecentTransactions() {
   }
 
   const formatDate = (date: any) => {
-    if (!date) return '';
-    const d = date.toDate ? date.toDate() : new Date(date);
-    return d.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return formatDateForDisplay(date);
   };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>, transaction: any) => {
@@ -245,9 +240,21 @@ export default function RecentTransactions() {
   };
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">
+    <Paper sx={{ 
+      p: 3,
+      width: '100%',
+      mx: { xs: 'auto', md: 0 },
+      maxWidth: { xs: 'calc(100vw - 32px)', md: 'none' }
+    }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 2,
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 1, sm: 0 }
+      }}>
+        <Typography variant="h6" sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
           Transacciones Recientes
         </Typography>
         {process.env.NODE_ENV === 'development' && (
@@ -289,14 +296,35 @@ export default function RecentTransactions() {
           
           return (
             <Box key={`${transaction.type}-${transaction.id}-${index}`}>
-              <ListItem sx={{ px: 0 }}>
+              <ListItem sx={{ 
+                px: 0,
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'stretch', sm: 'center' },
+                gap: { xs: 1, sm: 0 }
+              }}>
                 <ListItemText
+                  sx={{ 
+                    minWidth: { xs: '100%', sm: 'auto' },
+                    textAlign: { xs: 'center', sm: 'left' }
+                  }}
                   primary={
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="body1">
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: { xs: 1, sm: 0 }
+                    }}>
+                      <Typography variant="body1" sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
                         {transaction.description || transaction.category || 'Sin descripción'}
                       </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1,
+                        justifyContent: { xs: 'center', sm: 'flex-end' },
+                        flexWrap: 'wrap'
+                      }}>
                         <Typography 
                           variant="body1" 
                           sx={{ 
@@ -331,7 +359,15 @@ export default function RecentTransactions() {
                     </Box>
                   }
                   secondary={
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary"
+                      sx={{ 
+                        textAlign: { xs: 'center', sm: 'left' },
+                        display: 'block',
+                        mt: { xs: 1, sm: 0.5 }
+                      }}
+                    >
                       {formatDate(transaction.date)}
                     </Typography>
                   }

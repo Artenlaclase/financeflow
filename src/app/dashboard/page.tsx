@@ -1,6 +1,6 @@
 "use client";
 
-import { Container, Grid, Typography, Box, Paper, Button, IconButton, Tooltip } from '@mui/material';
+import { Container, Grid, Typography, Box, Paper, Button, IconButton, Tooltip, Card, CardContent } from '@mui/material';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
@@ -12,7 +12,7 @@ import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
 import EditProfileDialog from '../../components/shared/Auth/EditProfileDialog';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import { useRouter } from 'next/navigation';
-import { Analytics, Edit, Person, ShoppingCart } from '@mui/icons-material';
+import { Analytics, Edit, Person, ShoppingCart, Settings, Logout, Menu as MenuIcon } from '@mui/icons-material';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
@@ -47,95 +47,126 @@ export default function DashboardPage() {
   return (
     <AuthGuard requireAuth={true} requireFinanceSetup={true}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        {/* Saludo personalizado */}
-        <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Typography variant="h4" component="h1">
-              ¡Bienvenido, {getDisplayName()}!
-            </Typography>
-            <Tooltip title="Editar perfil">
-              <IconButton 
-                onClick={() => setShowEditProfile(true)}
-                size="small"
-                sx={{ ml: 1 }}
-              >
-                <Edit />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          {/* Sugerencia para completar perfil si no tiene nombre */}
-          {!userProfile && (
-            <Box sx={{ 
-              bgcolor: 'info.light', 
-              color: 'info.contrastText', 
-              p: 2, 
-              borderRadius: 1, 
-              mb: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <Person />
-              <Typography variant="body2">
-                <strong>¡Personaliza tu experiencia!</strong> 
-                <Button 
-                  variant="text" 
-                  size="small" 
+        {/* Header con saludo y título */}
+        <Grid container spacing={3} alignItems="center" sx={{ mb: 4 }}>
+          <Grid item xs={12} md={6}>
+            {/* Saludo personalizado */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Typography variant="h4" component="h1">
+                ¡Bienvenido, {getDisplayName()}!
+              </Typography>
+              <Tooltip title="Editar perfil">
+                <IconButton 
                   onClick={() => setShowEditProfile(true)}
-                  sx={{ ml: 1, color: 'inherit', textDecoration: 'underline' }}
+                  size="small"
+                  sx={{ ml: 1 }}
                 >
-                  Agrega tu nombre y apellido
-                </Button>
+                  <Edit />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            
+            <Typography variant="body1" color="text.secondary">
+              Aquí tienes un resumen de tu situación financiera
+            </Typography>
+          </Grid>
+          
+          <Grid item xs={12} md={6}>
+            <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
+              <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+                Dashboard Financiero
               </Typography>
             </Box>
-          )}
-          
-          <Typography variant="body1" color="text.secondary">
-            Aquí tienes un resumen de tu situación financiera
-          </Typography>
-        </Box>
+          </Grid>
+        </Grid>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h5" component="h2">
-            Dashboard Financiero
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button 
-              variant="contained" 
-              startIcon={<Analytics />}
-              onClick={() => router.push('/analytics')}
-              color="secondary"
-            >
-              Ver Análisis
-            </Button>
-            <Button 
-              variant="contained" 
-              startIcon={<ShoppingCart />}
-              onClick={() => router.push('/compras')}
-              color="success"
-            >
-              Compras Mercado
-            </Button>
-            <Button 
-              variant="outlined" 
-              onClick={() => setShowFinanceSetup(true)}
-              color="primary"
-            >
-              Reconfigurar Presupuesto
-            </Button>
-            <Button 
-              variant="outlined" 
-              startIcon={<Person />}
-              onClick={() => setShowEditProfile(true)}
-            >
-              Editar Perfil
-            </Button>
-            <Button variant="outlined" onClick={handleLogout}>
-              Cerrar Sesión
-            </Button>
+        {/* Sugerencia para completar perfil si no tiene nombre */}
+        {!userProfile && (
+          <Box sx={{ 
+            bgcolor: 'info.light', 
+            color: 'info.contrastText', 
+            p: 2, 
+            borderRadius: 1, 
+            mb: 3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1
+          }}>
+            <Person />
+            <Typography variant="body2">
+              <strong>¡Personaliza tu experiencia!</strong> 
+              <Button 
+                variant="text" 
+                size="small" 
+                onClick={() => setShowEditProfile(true)}
+                sx={{ ml: 1, color: 'inherit', textDecoration: 'underline' }}
+              >
+                Agrega tu nombre y apellido
+              </Button>
+            </Typography>
           </Box>
-        </Box>
+        )}
+
+        {/* Menú de navegación */}
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <MenuIcon />
+              Navegación
+            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
+              flexWrap: 'wrap'
+            }}>
+              <Button 
+                variant="contained" 
+                startIcon={<Analytics />}
+                onClick={() => router.push('/analytics')}
+                color="secondary"
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                Ver Análisis
+              </Button>
+              <Button 
+                variant="contained" 
+                startIcon={<ShoppingCart />}
+                onClick={() => router.push('/compras')}
+                color="success"
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                Compras Mercado
+              </Button>
+              <Button 
+                variant="outlined" 
+                startIcon={<Settings />}
+                onClick={() => setShowFinanceSetup(true)}
+                color="primary"
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                Reconfigurar Presupuesto
+              </Button>
+              <Button 
+                variant="outlined" 
+                startIcon={<Person />}
+                onClick={() => setShowEditProfile(true)}
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                Editar Perfil
+              </Button>
+              <Button 
+                variant="outlined" 
+                startIcon={<Logout />}
+                onClick={handleLogout}
+                color="error"
+                sx={{ width: { xs: '100%', sm: 'auto' } }}
+              >
+                Cerrar Sesión
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
 
       {profile && (
         <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -182,7 +213,15 @@ export default function DashboardPage() {
         </Grid>
         
         <Grid item xs={12}>
-          <RecentTransactions />
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center',
+            px: { xs: 2, md: 0 }
+          }}>
+            <Box sx={{ width: '100%', maxWidth: { xs: '100%', md: 'none' } }}>
+              <RecentTransactions />
+            </Box>
+          </Box>
         </Grid>
       </Grid>
       

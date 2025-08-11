@@ -12,6 +12,7 @@ import {
   Alert
 } from '@mui/material';
 import { useFinanceProfile } from '../../../contexts/FinanceProfileContext';
+import { formatDateForInput } from '../../../lib/dateUtils';
 
 interface FinanceSetupFormProps {
   onComplete: () => void;
@@ -20,9 +21,10 @@ interface FinanceSetupFormProps {
 
 export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFormProps) {
   const { profile, createProfile, updateProfile, loading } = useFinanceProfile();
+  
   const [monthlyIncome, setMonthlyIncome] = useState<number>(profile?.monthlyIncome || 0);
   const [incomeStartDate, setIncomeStartDate] = useState<string>(
-    profile?.incomeStartDate ? new Date(profile.incomeStartDate).toISOString().split('T')[0] : ''
+    formatDateForInput(profile?.incomeStartDate)
   );
   const [fixedExpenses, setFixedExpenses] = useState({
     housing: profile?.fixedExpenses.housing || 0,
@@ -33,7 +35,7 @@ export default function FinanceSetupForm({ onComplete, onSkip }: FinanceSetupFor
     insurance: profile?.fixedExpenses.insurance || 0
   });
   const [expensesStartDate, setExpensesStartDate] = useState<string>(
-    profile?.expensesStartDate ? new Date(profile.expensesStartDate).toISOString().split('T')[0] : ''
+    formatDateForInput(profile?.expensesStartDate)
   );
   const [error, setError] = useState('');
 
