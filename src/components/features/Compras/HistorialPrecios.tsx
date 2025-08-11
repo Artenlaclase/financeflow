@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Paper,
   Typography,
@@ -23,7 +23,8 @@ import {
   Card,
   CardContent,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Fade
 } from '@mui/material';
 import { 
   TrendingUp, 
@@ -31,7 +32,9 @@ import {
   Store, 
   Scale,
   Search,
-  Timeline
+  Timeline,
+  KeyboardArrowDown,
+  KeyboardArrowUp
 } from '@mui/icons-material';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
@@ -66,6 +69,9 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
   const [loading, setLoading] = useState(true);
   const [filtroProducto, setFiltroProducto] = useState('');
   const [filtroSupermercado, setFiltroSupermercado] = useState('');
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -149,6 +155,28 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
     
     return coincideProducto && coincideSupermercado;
   });
+
+  // Verificar si hay contenido scrolleable en móvil
+  useEffect(() => {
+    const checkScrollable = () => {
+      if (scrollContainerRef.current && isMobile) {
+        const { scrollHeight, clientHeight, scrollTop } = scrollContainerRef.current;
+        const hasMoreContent = scrollHeight > clientHeight;
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5;
+        const isAtTop = scrollTop <= 5;
+        
+        setCanScrollDown(hasMoreContent && !isAtBottom);
+        setCanScrollUp(hasMoreContent && !isAtTop);
+      }
+    };
+
+    checkScrollable();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollable);
+      return () => container.removeEventListener('scroll', checkScrollable);
+    }
+  }, [productosFiltrados, isMobile]);
 
   const calcularEstadisticas = () => {
     if (productosFiltrados.length === 0) return null;
@@ -329,67 +357,184 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
           </Alert>
         ) : isMobile ? (
           /* Vista móvil - Cards */
-          <Grid container spacing={2}>
-            {productosFiltrados.map((producto) => (
-              <Grid item xs={12} key={producto.id}>
-                <Card variant="outlined">
-                  <CardContent sx={{ pb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                      <Typography variant="subtitle1" fontWeight="medium" sx={{ flex: 1 }}>
-                        {producto.nombre}
-                      </Typography>
-                      <Typography variant="h6" color="primary" sx={{ ml: 2 }}>
-                        ${producto.total.toLocaleString()}
-                      </Typography>
-                    </Box>
-                    
-                    <Grid container spacing={1} sx={{ mt: 1 }}>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Fecha:</strong> {formatFecha(producto.fecha)}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Supermercado:</strong> {producto.supermercado}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Ubicación:</strong> {producto.ubicacion}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          <strong>Precio:</strong> {producto.porPeso ? (
-                            `$${producto.precioKilo?.toLocaleString()}/kg`
-                          ) : (
-                            `$${producto.precio.toLocaleString()} c/u`
-                          )}
-                        </Typography>
-                      </Grid>
-                    </Grid>
+          <Box sx={{ position: 'relative' }}>
+            <Box
+              ref={scrollContainerRef}
+              sx={{
+                maxHeight: '500px',
+                overflow: 'auto',
+                // Sombras para indicar contenido scrolleable
+                background: `
+                  linear-gradient(white 30%, rgba(255,255,255,0)) 0 0,
+                  linear-gradient(rgba(255,255,255,0), white 70%) 0 100%,
+                  radial-gradient(50% 0, farthest-side, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 0,
+                  radial-gradient(50% 100%, farthest-side, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%
+                `,
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '100% 40px, 100% 40px, 100% 14px, 100% 14px',
+                backgroundAttachment: 'local, local, scroll, scroll'
+              }}
+            >
+              <Grid container spacing={2}>
+                {productosFiltrados.map((producto) => (
+                  <Grid item xs={12} key={producto.id}>
+                    <Card variant="outlined">
+                      <CardContent sx={{ pb: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="subtitle1" fontWeight="medium" sx={{ flex: 1 }}>
+                            {producto.nombre}
+                          </Typography>
+                          <Typography variant="h6" color="primary" sx={{ ml: 2 }}>
+                            ${producto.total.toLocaleString()}
+                          </Typography>
+                        </Box>
+                        
+                        <Grid container spacing={1} sx={{ mt: 1 }}>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Fecha:</strong> {formatFecha(producto.fecha)}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Supermercado:</strong> {producto.supermercado}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Ubicación:</strong> {producto.ubicacion}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Precio:</strong> {producto.porPeso ? (
+                                `$${producto.precioKilo?.toLocaleString()}/kg`
+                              ) : (
+                                `$${producto.precio.toLocaleString()} c/u`
+                              )}
+                            </Typography>
+                          </Grid>
+                        </Grid>
 
-                    <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {producto.porPeso && (
-                        <Chip 
-                          size="small" 
-                          icon={<Scale />} 
-                          label={`${producto.peso}kg`}
-                          variant="outlined"
-                        />
-                      )}
-                      <Chip
-                        size="small"
-                        label={`${getMetodoPagoInfo(producto.metodoPago).icon} ${getMetodoPagoInfo(producto.metodoPago).label}`}
-                        color={getMetodoPagoInfo(producto.metodoPago).color as any}
-                      />
-                    </Box>
-                  </CardContent>
-                </Card>
+                        <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {producto.porPeso && (
+                            <Chip 
+                              size="small" 
+                              icon={<Scale />} 
+                              label={`${producto.peso}kg`}
+                              variant="outlined"
+                            />
+                          )}
+                          <Chip
+                            size="small"
+                            label={`${getMetodoPagoInfo(producto.metodoPago).icon} ${getMetodoPagoInfo(producto.metodoPago).label}`}
+                            color={getMetodoPagoInfo(producto.metodoPago).color as any}
+                          />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
+            </Box>
+
+            {/* Indicadores de scroll para móvil */}
+            {canScrollDown && (
+              <Fade in={canScrollDown}>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 20,
+                    right: 20,
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: 40,
+                    height: 40,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: 2,
+                    zIndex: 10,
+                    animation: 'bounce 2s infinite',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark'
+                    },
+                    '@keyframes bounce': {
+                      '0%, 20%, 50%, 80%, 100%': {
+                        transform: 'translateY(0)'
+                      },
+                      '40%': {
+                        transform: 'translateY(-10px)'
+                      },
+                      '60%': {
+                        transform: 'translateY(-5px)'
+                      }
+                    }
+                  }}
+                  onClick={() => {
+                    if (scrollContainerRef.current) {
+                      scrollContainerRef.current.scrollBy({
+                        top: 200,
+                        behavior: 'smooth'
+                      });
+                    }
+                  }}
+                >
+                  <KeyboardArrowDown />
+                </Box>
+              </Fade>
+            )}
+
+            {canScrollUp && (
+              <Fade in={canScrollUp}>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 20,
+                    right: 20,
+                    backgroundColor: 'secondary.main',
+                    color: 'white',
+                    borderRadius: '50%',
+                    width: 40,
+                    height: 40,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: 2,
+                    zIndex: 10,
+                    animation: 'bounceUp 2s infinite',
+                    '&:hover': {
+                      backgroundColor: 'secondary.dark'
+                    },
+                    '@keyframes bounceUp': {
+                      '0%, 20%, 50%, 80%, 100%': {
+                        transform: 'translateY(0)'
+                      },
+                      '40%': {
+                        transform: 'translateY(10px)'
+                      },
+                      '60%': {
+                        transform: 'translateY(5px)'
+                      }
+                    }
+                  }}
+                  onClick={() => {
+                    if (scrollContainerRef.current) {
+                      scrollContainerRef.current.scrollBy({
+                        top: -200,
+                        behavior: 'smooth'
+                      });
+                    }
+                  }}
+                >
+                  <KeyboardArrowUp />
+                </Box>
+              </Fade>
+            )}
+          </Box>
         ) : (
           /* Vista desktop - Tabla */
           <TableContainer sx={{ maxHeight: 600 }}>

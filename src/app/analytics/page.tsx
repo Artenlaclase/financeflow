@@ -42,16 +42,32 @@ export default function AnalyticsPage() {
     <AuthGuard requireAuth={true} requireFinanceSetup={true}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'stretch', md: 'center' }, 
+          gap: 2,
+          mb: 4 
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button 
               variant="outlined" 
               startIcon={<ArrowBack />}
               onClick={handleBackToDashboard}
+              sx={{ 
+                alignSelf: { xs: 'flex-start', md: 'center' }
+              }}
             >
               Volver al Dashboard
             </Button>
-            <Typography variant="h4" component="h1">
+            <Typography 
+              variant="h4" 
+              component="h1"
+              sx={{ 
+                fontSize: { xs: '1.5rem', md: '2.125rem' }
+              }}
+            >
               Análisis Financiero
             </Typography>
           </Box>
@@ -131,11 +147,14 @@ export default function AnalyticsPage() {
         <Grid container spacing={3}>
           {/* Gastos por categoría */}
           <Grid item xs={12} lg={6}>
-            <Card sx={{ height: '500px' }}>
-              <CardContent>
+            <Card sx={{ 
+              height: { xs: 'auto', lg: '500px' },
+              minHeight: { xs: '400px', lg: '500px' }
+            }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <PieChart sx={{ mr: 1 }} />
-                  <Typography variant="h6">
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     Gastos por Categoría
                   </Typography>
                 </Box>
@@ -146,11 +165,14 @@ export default function AnalyticsPage() {
 
           {/* Tendencia mensual */}
           <Grid item xs={12} lg={6}>
-            <Card sx={{ height: '500px' }}>
-              <CardContent>
+            <Card sx={{ 
+              height: { xs: 'auto', lg: '500px' },
+              minHeight: { xs: '400px', lg: '500px' }
+            }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <TrendingUp sx={{ mr: 1 }} />
-                  <Typography variant="h6">
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     Tendencia Mensual
                   </Typography>
                 </Box>
@@ -161,11 +183,14 @@ export default function AnalyticsPage() {
 
           {/* Resumen anual */}
           <Grid item xs={12}>
-            <Card sx={{ height: '400px' }}>
-              <CardContent>
+            <Card sx={{ 
+              height: { xs: 'auto', lg: '400px' },
+              minHeight: { xs: '350px', lg: '400px' }
+            }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <BarChart sx={{ mr: 1 }} />
-                  <Typography variant="h6">
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
                     Resumen Anual - {selectedYear}
                   </Typography>
                 </Box>
