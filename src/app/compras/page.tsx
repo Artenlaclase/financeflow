@@ -6,28 +6,20 @@ import { useRouter } from 'next/navigation';
 import { ArrowBack, ShoppingCart, Timeline, Receipt } from '@mui/icons-material';
 import AuthGuard from '@/components/shared/Auth/AuthGuard';
 import ComprasMercadoForm from '@/components/features/Forms/ComprasMercadoForm';
-import CompraSimpleForm from '@/components/features/Forms/CompraSimpleForm';
 import HistorialCompras from '@/components/features/Compras/HistorialCompras';
 import HistorialPrecios from '@/components/features/Compras/HistorialPrecios';
-import FirebaseDiagnostic from '@/components/features/Compras/FirebaseDiagnosticNew';
-import DataViewer from '@/components/features/Compras/DataViewer';
 
 export default function ComprasPage() {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
-  const [showSimpleForm, setShowSimpleForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
-
-  // Log de debug removido temporalmente para evitar bucle infinito
 
   // Usar useMemo para estabilizar las funciones
   const handlers = useMemo(() => ({
     handleCloseForm: () => setShowForm(false),
-    handleCloseSimpleForm: () => setShowSimpleForm(false),
     handleCompraCompleta: () => {
       setShowForm(false);
-      setShowSimpleForm(false);
       setRefreshTrigger(prev => prev + 1);
     },
     handleTabChange: (event: React.SyntheticEvent, newValue: number) => {
@@ -39,42 +31,70 @@ export default function ComprasPage() {
     <AuthGuard requireAuth={true} requireFinanceSetup={true}>
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: { xs: 'stretch', md: 'center' }, 
+          gap: 2, 
+          mb: 4 
+        }}>
           <Button
             startIcon={<ArrowBack />}
             onClick={() => router.push('/dashboard')}
             variant="outlined"
+            sx={{ 
+              alignSelf: { xs: 'flex-start', md: 'center' },
+              mb: { xs: 2, md: 0 }
+            }}
           >
             Volver al Dashboard
           </Button>
           
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ flexGrow: 1, textAlign: { xs: 'center', md: 'left' } }}>
+            <Typography 
+              variant="h4"
+              component="h1" 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: { xs: 'center', md: 'flex-start' },
+                gap: 1,
+                fontSize: { xs: '1.5rem', md: '2.125rem' }
+              }}
+            >
               <ShoppingCart />
               Compras de Supermercado
             </Typography>
-            <Typography variant="body1" color="text.secondary">
+            <Typography 
+              variant="body1" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: { xs: '0.875rem', md: '1rem' },
+                mt: 1
+              }}
+            >
               Registra tus compras del supermercado y mantén control de tus gastos en alimentación
             </Typography>
           </Box>
 
-          <Button
-            variant="contained"
-            startIcon={<ShoppingCart />}
-            onClick={() => setShowForm(true)}
-            size="large"
-            sx={{ mr: 1 }}
-          >
-            Nueva Compra
-          </Button>
-          
-          <Button
-            variant="outlined"
-            onClick={() => setShowSimpleForm(true)}
-            size="large"
-          >
-            Prueba Simple
-          </Button>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1,
+            width: { xs: '100%', md: 'auto' }
+          }}>
+            <Button
+              variant="contained"
+              startIcon={<ShoppingCart />}
+              onClick={() => setShowForm(true)}
+              size="large"
+              sx={{
+                width: { xs: '100%', sm: 'auto' }
+              }}
+            >
+              Nueva Compra
+            </Button>
+          </Box>
         </Box>
 
         {/* Tabs Navigation */}
@@ -96,12 +116,6 @@ export default function ComprasPage() {
         {/* Tab Content */}
         <Grid container spacing={3}>
           <Grid item xs={12}>
-            {/* Componente de diagnóstico */}
-            <FirebaseDiagnostic />
-            
-            {/* Visor de datos */}
-            <DataViewer />
-            
             {activeTab === 0 && (
               <HistorialCompras refreshTrigger={refreshTrigger} />
             )}
@@ -115,13 +129,6 @@ export default function ComprasPage() {
         <ComprasMercadoForm
           open={showForm}
           onClose={handlers.handleCloseForm}
-          onComplete={handlers.handleCompraCompleta}
-        />
-        
-        {/* Formulario simple de prueba */}
-        <CompraSimpleForm
-          open={showSimpleForm}
-          onClose={handlers.handleCloseSimpleForm}
           onComplete={handlers.handleCompraCompleta}
         />
       </Container>

@@ -21,7 +21,9 @@ import {
   Select,
   MenuItem,
   Card,
-  CardContent
+  CardContent,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { 
   TrendingUp, 
@@ -57,11 +59,13 @@ interface HistorialPreciosProps {
 }
 
 export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosProps) {
+  const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [productos, setProductos] = useState<ProductoHistorial[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroProducto, setFiltroProducto] = useState('');
   const [filtroSupermercado, setFiltroSupermercado] = useState('');
-  const { user } = useAuth();
 
   useEffect(() => {
     if (!user) {
@@ -310,7 +314,7 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
         </Paper>
       )}
 
-      {/* Tabla de productos */}
+      {/* Tabla/Cards de productos */}
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>
           Detalle del Historial
@@ -323,7 +327,71 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
               : 'No se encontraron productos con los filtros aplicados.'
             }
           </Alert>
+        ) : isMobile ? (
+          /* Vista móvil - Cards */
+          <Grid container spacing={2}>
+            {productosFiltrados.map((producto) => (
+              <Grid item xs={12} key={producto.id}>
+                <Card variant="outlined">
+                  <CardContent sx={{ pb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="medium" sx={{ flex: 1 }}>
+                        {producto.nombre}
+                      </Typography>
+                      <Typography variant="h6" color="primary" sx={{ ml: 2 }}>
+                        ${producto.total.toLocaleString()}
+                      </Typography>
+                    </Box>
+                    
+                    <Grid container spacing={1} sx={{ mt: 1 }}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Fecha:</strong> {formatFecha(producto.fecha)}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Supermercado:</strong> {producto.supermercado}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Ubicación:</strong> {producto.ubicacion}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          <strong>Precio:</strong> {producto.porPeso ? (
+                            `$${producto.precioKilo?.toLocaleString()}/kg`
+                          ) : (
+                            `$${producto.precio.toLocaleString()} c/u`
+                          )}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {producto.porPeso && (
+                        <Chip 
+                          size="small" 
+                          icon={<Scale />} 
+                          label={`${producto.peso}kg`}
+                          variant="outlined"
+                        />
+                      )}
+                      <Chip
+                        size="small"
+                        label={`${getMetodoPagoInfo(producto.metodoPago).icon} ${getMetodoPagoInfo(producto.metodoPago).label}`}
+                        color={getMetodoPagoInfo(producto.metodoPago).color as any}
+                      />
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         ) : (
+          /* Vista desktop - Tabla */
           <TableContainer sx={{ maxHeight: 600 }}>
             <Table stickyHeader>
               <TableHead>
