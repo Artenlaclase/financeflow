@@ -42,6 +42,15 @@ export default function RecentTransactions() {
   console.log('RecentTransactions - Current transactions:', recentTransactions);
   console.log('RecentTransactions - User:', user);
   console.log('RecentTransactions - Transactions length:', recentTransactions?.length || 0);
+  console.log('RecentTransactions - Detailed transactions:', recentTransactions.map(t => ({
+    id: t.id,
+    type: t.type,
+    amount: t.amount,
+    category: t.category,
+    description: t.description,
+    date: t.date,
+    fullData: t
+  })));
   console.log('RecentTransactions - Menu state:', { 
     anchorEl: Boolean(anchorEl), 
     selectedTransaction: selectedTransaction?.id,
@@ -145,7 +154,7 @@ export default function RecentTransactions() {
       return;
     }
 
-    if (!transactionToDelete.type || (transactionToDelete.type !== 'income' && transactionToDelete.type !== 'expense')) {
+    if (!transactionToDelete.type || (transactionToDelete.type !== 'income' && transactionToDelete.type !== 'expense' && transactionToDelete.type !== 'compra')) {
       console.error('Invalid transaction type:', transactionToDelete.type);
       setError('Error: Tipo de transacción no válido');
       return;
@@ -169,7 +178,9 @@ export default function RecentTransactions() {
       // No necesitamos llamar refreshData() manualmente
       
       // Mostrar mensaje de éxito
-      setSuccess(`${transactionToDelete.type === 'income' ? 'Ingreso' : 'Gasto'} eliminado correctamente`);
+      const tipoTexto = transactionToDelete.type === 'income' ? 'Ingreso' : 
+                        transactionToDelete.type === 'compra' ? 'Compra' : 'Gasto';
+      setSuccess(`${tipoTexto} eliminado correctamente`);
       
       // Limpiar estados
       setDeleteDialogOpen(false);
@@ -296,7 +307,8 @@ export default function RecentTransactions() {
                           {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
                         </Typography>
                         <Chip 
-                          label={transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
+                          label={transaction.type === 'income' ? 'Ingreso' : 
+                                 transaction.type === 'compra' ? 'Compra' : 'Gasto'}
                           size="small"
                           color={transaction.type === 'income' ? 'success' : 'error'}
                         />

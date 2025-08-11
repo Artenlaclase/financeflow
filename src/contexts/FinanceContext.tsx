@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 
 export interface Transaction {
   id: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'compra';
   amount: number;
   description?: string;
   category?: string;
@@ -49,15 +49,17 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     console.log('Setting up Firestore listeners for user:', user.uid);
 
     // Obtener transacciones de la colección global 'transactions' (incluye compras de supermercado)
+    // Temporalmente simplificamos el query para verificar conectividad
     const transactionsQuery = query(
       collection(db, 'transactions'),
-      where('userId', '==', user.uid),
-      orderBy('date', 'desc'),
-      limit(20)
+      where('userId', '==', user.uid)
     );
     
+    console.log('🔍 Setting up transactions query...');
+    
     const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
-      console.log('Global transactions loaded:', snapshot.size, 'documents');
+      console.log('🔥 Global transactions loaded:', snapshot.size, 'documents');
+      console.log('🔥 Raw transaction data:', snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
       let totalIncome = 0;
       let totalExpenses = 0;
@@ -78,7 +80,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         
         if (data.type === 'income') {
           totalIncome += data.amount || 0;
-        } else if (data.type === 'expense') {
+        } else if (data.type === 'expense' || data.type === 'compra') {
           totalExpenses += data.amount || 0;
         }
       });
@@ -90,11 +92,23 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         transactions: allTransactions
       });
       
+      // Ordenar todas las transacciones por fecha (más recientes primero)
+      allTransactions.sort((a, b) => {
+        const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || 0);
+        const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
       setIncome(totalIncome);
       setExpenses(totalExpenses);
-      setRecentTransactions(allTransactions.slice(0, 10));
+      setRecentTransactions(allTransactions.slice(0, 10)); // Tomar solo las 10 más recientes
     }, (error) => {
-      console.error('Error fetching transactions:', error);
+      console.error('❌ Error fetching global transactions:', error);
+      console.error('❌ Error details:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
       // En caso de error, mantener datos existentes
     });
 

@@ -79,7 +79,9 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           // Filtrar localmente por categoría, tipo y que tenga detalleCompra
-          if (data.category === 'Supermercado' && data.type === 'expense' && data.detalleCompra) {
+          if ((data.category === 'Supermercado' || data.category === 'Compras') && 
+              (data.type === 'expense' || data.type === 'compra') && 
+              data.detalleCompra) {
             comprasData.push({
               id: doc.id,
               ...data
@@ -149,7 +151,11 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
 
   const calcularEstadisticas = () => {
     const totalGastado = compras.reduce((sum, compra) => sum + compra.amount, 0);
-    const totalProductos = compras.reduce((sum, compra) => sum + compra.detalleCompra.totalProductos, 0);
+    const totalProductos = compras.reduce((sum, compra) => {
+      // Calcular productos desde detalleCompra.productos array length
+      const productos = compra.detalleCompra?.productos || (compra as any).productos || [];
+      return sum + productos.length;
+    }, 0);
     const comprasUltimoMes = compras.filter(compra => {
       const fechaCompra = compra.date.toDate ? compra.date.toDate() : new Date(compra.date);
       const unMesAtras = new Date();
@@ -159,7 +165,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
 
     // Estadísticas por método de pago
     const porMetodoPago = compras.reduce((acc, compra) => {
-      const metodo = compra.detalleCompra.metodoPago || 'no-especificado';
+      const metodo = compra.detalleCompra?.metodoPago || (compra as any).metodoPago || 'no-especificado';
       if (!acc[metodo]) {
         acc[metodo] = { cantidad: 0, total: 0 };
       }
@@ -389,23 +395,23 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                       <Store color="primary" />
                       <Box>
                         <Typography variant="h6">
-                          {compra.detalleCompra.supermercado}
+                          {compra.detalleCompra?.supermercado || (compra as any).supermercado || 'Supermercado no especificado'}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
                           <LocationOn fontSize="small" color="action" />
                           <Typography variant="body2" color="text.secondary">
-                            {compra.detalleCompra.ubicacion}
+                            {compra.detalleCompra?.ubicacion || (compra as any).ubicacion || 'Ubicación no especificada'}
                           </Typography>
                           <Chip 
                             size="small" 
                             label={formatFecha(compra.date)} 
                             variant="outlined"
                           />
-                          {compra.detalleCompra.metodoPago && (
+                          {(compra.detalleCompra?.metodoPago || (compra as any).metodoPago) && (
                             <Chip 
                               size="small" 
-                              label={`${getMetodoPagoInfo(compra.detalleCompra.metodoPago).icon} ${getMetodoPagoInfo(compra.detalleCompra.metodoPago).label}`}
-                              color={getMetodoPagoInfo(compra.detalleCompra.metodoPago).color as any}
+                              label={`${getMetodoPagoInfo(compra.detalleCompra?.metodoPago || (compra as any).metodoPago).icon} ${getMetodoPagoInfo(compra.detalleCompra?.metodoPago || (compra as any).metodoPago).label}`}
+                              color={getMetodoPagoInfo(compra.detalleCompra?.metodoPago || (compra as any).metodoPago).color as any}
                               variant="filled"
                             />
                           )}
@@ -419,7 +425,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                           ${compra.amount.toLocaleString()}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {compra.detalleCompra.totalProductos} productos
+                          {(compra.detalleCompra?.productos || (compra as any).productos || []).length} productos
                         </Typography>
                       </Box>
                       
@@ -460,7 +466,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                     </Typography>
                     
                     <List dense>
-                      {compra.detalleCompra.productos.map((producto, index) => (
+                      {(compra.detalleCompra?.productos || []).map((producto, index) => (
                         <ListItem 
                           key={`${compra.id}-producto-${index}`}
                           sx={{ 
@@ -483,21 +489,24 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                             }
                             secondary={
                               <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                {producto.porPeso ? (
+                                {producto.unidad === 'peso' || producto.porPeso ? (
                                   <>
-                                    <Chip size="small" icon={<Scale />} label={`${producto.peso}kg`} />
-                                    <Chip size="small" label={`$${producto.precioKilo}/kg`} />
+                                    <Chip size="small" icon={<Scale />} label={`${producto.pesoTotal || producto.peso || producto.cantidad}kg`} />
+                                    <Chip size="small" label={`$${producto.precioKilo || producto.precioKilo || 'N/A'}/kg`} />
                                   </>
-                                ) : producto.porLitro ? (
+                                ) : producto.unidad === 'litro' || producto.porLitro ? (
                                   <>
-                                    <Chip size="small" icon={<LocalDrink />} label={`${producto.litros}L`} />
-                                    <Chip size="small" label={`$${producto.precioLitro}/L`} />
+                                    <Chip size="small" icon={<LocalDrink />} label={`${producto.litrosTotal || producto.litros || producto.cantidad}L`} />
+                                    <Chip size="small" label={`$${producto.precioLitro || producto.precioLitro || 'N/A'}/L`} />
                                   </>
                                 ) : (
                                   <>
                                     <Chip size="small" label={`Cantidad: ${producto.cantidad}`} />
                                     <Chip size="small" label={`$${producto.precio} c/u`} />
                                   </>
+                                )}
+                                {producto.marca && (
+                                  <Chip size="small" label={producto.marca} variant="outlined" />
                                 )}
                               </Box>
                             }
@@ -530,10 +539,10 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
           {compraABorrar && (
             <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
               <Typography variant="subtitle2" gutterBottom>
-                <strong>{compraABorrar.detalleCompra.supermercado}</strong>
+                <strong>{compraABorrar.detalleCompra?.supermercado || (compraABorrar as any).supermercado || 'Supermercado no especificado'}</strong>
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                📍 {compraABorrar.detalleCompra.ubicacion}
+                📍 {compraABorrar.detalleCompra?.ubicacion || (compraABorrar as any).ubicacion || 'Ubicación no especificada'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 📅 {formatFecha(compraABorrar.date)}
@@ -542,7 +551,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                 💰 ${compraABorrar.amount.toLocaleString()}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                🛍️ {compraABorrar.detalleCompra.totalProductos} productos
+                🛍️ {(compraABorrar.detalleCompra?.productos || (compraABorrar as any).productos || []).length} productos
               </Typography>
             </Box>
           )}

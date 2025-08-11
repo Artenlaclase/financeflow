@@ -3,14 +3,23 @@
 export interface ProductoCompra {
   id?: string;
   nombre: string;
+  marca?: string; // Agregado: marca del producto
   precio: number;
   cantidad: number;
-  porPeso?: boolean;
-  porLitro?: boolean;
+  unidad?: 'unidad' | 'peso' | 'litro'; // Agregado: unidad de medida
+  
+  // Propiedades para peso
+  porPeso?: boolean; // Backward compatibility
   precioKilo?: number;
+  peso?: number; // Backward compatibility
+  pesoTotal?: number; // Nueva propiedad
+  
+  // Propiedades para litros
+  porLitro?: boolean; // Backward compatibility
   precioLitro?: number;
-  peso?: number;
-  litros?: number;
+  litros?: number; // Backward compatibility
+  litrosTotal?: number; // Nueva propiedad
+  
   total: number;
 }
 

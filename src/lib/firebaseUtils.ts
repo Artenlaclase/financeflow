@@ -5,7 +5,7 @@ import { db } from './firebase/config';
 
 export interface Transaction {
   id: string;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'compra';
   amount: number;
   description?: string;
   category?: string;
@@ -15,7 +15,7 @@ export interface Transaction {
 export const updateTransaction = async (
   userId: string, 
   transactionId: string, 
-  type: 'income' | 'expense',
+  type: 'income' | 'expense' | 'compra',
   updateData: Partial<Transaction>
 ): Promise<void> => {
   try {
@@ -45,7 +45,7 @@ export const updateTransaction = async (
 export const deleteTransaction = async (
   userId: string, 
   transactionId: string, 
-  type: 'income' | 'expense'
+  type: 'income' | 'expense' | 'compra'
 ): Promise<void> => {
   console.log('deleteTransaction called with:', { userId, transactionId, type });
   
