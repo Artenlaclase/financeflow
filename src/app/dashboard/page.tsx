@@ -168,41 +168,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-      {profile && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="primary">
-                Ingreso Mensual
-              </Typography>
-              <Typography variant="h4">
-                ${profile.monthlyIncome.toLocaleString()}
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="error">
-                Gastos Fijos
-              </Typography>
-              <Typography variant="h4">
-                ${profile.totalFixedExpenses.toLocaleString()}
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h6" color="success.main">
-                Disponible
-              </Typography>
-              <Typography variant="h4">
-                ${profile.availableIncome.toLocaleString()}
-              </Typography>
-            </Paper>
-          </Grid>
-        </Grid>
-      )}
-      
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
           <BalanceCard />

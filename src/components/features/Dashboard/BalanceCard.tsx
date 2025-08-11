@@ -8,27 +8,32 @@ export default function BalanceCard() {
   const { expenses } = useFinance();
   const { profile } = useFinanceProfile();
 
-  // Calcular saldo actual: saldo disponible menos gastos ingresados
+  // Calcular saldo actual: ingresos disponibles menos gastos reales
   const currentBalance = profile ? profile.availableIncome - expenses : 0;
 
   return (
-    <Card sx={{ minWidth: 275, mb: 2 }}>
-      <CardContent>
-        <Typography variant="h5" component="div">
-          Saldo Actual
+    <Card sx={{ minWidth: 275, mb: 2, textAlign: 'center' }}>
+      <CardContent sx={{ py: 4 }}>
+        <Typography variant="h5" component="div" gutterBottom color="text.secondary">
+          💰 Saldo Disponible
         </Typography>
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="h4" color={currentBalance >= 0 ? 'success.main' : 'error.main'}>
-            ${currentBalance.toFixed(2)}
+        
+        <Box sx={{ mt: 3, mb: 2 }}>
+          <Typography 
+            variant="h2" 
+            color={currentBalance >= 0 ? 'success.main' : 'error.main'}
+            sx={{ fontWeight: 'bold' }}
+          >
+            ${currentBalance.toLocaleString()}
           </Typography>
         </Box>
-        {profile && (
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              Disponible: ${profile.availableIncome.toLocaleString()} - Gastos: ${expenses.toLocaleString()}
-            </Typography>
-          </Box>
-        )}
+
+        <Typography variant="body2" color="text.secondary">
+          {currentBalance >= 0 
+            ? '✅ Estás dentro del presupuesto' 
+            : '⚠️ Has excedido tu presupuesto'
+          }
+        </Typography>
       </CardContent>
     </Card>
   );
