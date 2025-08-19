@@ -74,6 +74,7 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    console.log('🔄 HistorialPrecios useEffect triggered - refreshTrigger:', refreshTrigger);
     if (!user) {
       setLoading(false);
       return;

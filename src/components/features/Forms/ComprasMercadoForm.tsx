@@ -266,7 +266,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
 
       const transactionData = {
         type: 'expense',
-        category: 'Compras', // Cambiado de 'Supermercado' a 'Compras' para compatibilidad con dashboard
+        category: 'Supermercado', // Corregido: debe ser 'Supermercado' para compras detalladas
         subcategory: 'Supermercado',
         amount: totalCompra,
         description: `Compra en ${supermercadoFinal} - ${ubicacion}`,
@@ -296,6 +296,45 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       const docRef = await addDoc(collection(db, 'transactions'), transactionData);
       console.log('✅ Transacción guardada con ID:', docRef.id);
 
+      // Guardar productos individuales en el historial de precios
+      console.log('💾 Guardando productos en historial de precios...', {
+        cantidadProductos: productos.length,
+        productos: productos.map(p => ({ nombre: p.nombre, unidad: p.unidad, total: p.total }))
+      });
+      const productosHistorial = productos.map(producto => ({
+        transactionId: docRef.id,
+        userId: user?.uid,
+        nombre: producto.nombre || '',
+        marca: producto.marca || '',
+        supermercado: supermercadoFinal,
+        ubicacion: ubicacion || '',
+        fecha: Timestamp.now(),
+        porPeso: producto.unidad === 'peso',
+        porLitro: producto.unidad === 'litro',
+        precio: Number(producto.precio) || 0,
+        cantidad: Number(producto.cantidad) || 0,
+        precioKilo: producto.precioKilo ? Number(producto.precioKilo) : null,
+        peso: producto.pesoTotal ? Number(producto.pesoTotal) : null,
+        precioLitro: producto.precioLitro ? Number(producto.precioLitro) : null,
+        litros: producto.litrosTotal ? Number(producto.litrosTotal) : null,
+        total: Math.round(Number(producto.total) || 0),
+        metodoPago: metodoPago || '',
+        createdAt: Timestamp.now()
+      }));
+
+      // Guardar todos los productos en paralelo
+      const guardarPromises = productosHistorial.map((producto, index) => {
+        console.log(`📦 Producto ${index + 1}:`, producto);
+        return addDoc(collection(db, 'productos-historial'), producto);
+      });
+      
+      const resultados = await Promise.all(guardarPromises);
+      console.log('✅ Productos guardados en historial de precios:', {
+        cantidad: productosHistorial.length,
+        ids: resultados.map(r => r.id),
+        timestamp: new Date().toISOString()
+      });
+
       // Resetear formulario
       setSupermercado('');
       setSupermercadoPersonalizado('');
@@ -312,9 +351,15 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       setError('');
 
       onComplete();
+      console.log('🎉 Proceso completado - onComplete() llamado');
       
     } catch (error) {
       console.error('❌ Error al guardar:', error);
+      console.error('❌ Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error
+      });
       
       // Mostrar mensaje de error más específico
       if (error instanceof Error) {

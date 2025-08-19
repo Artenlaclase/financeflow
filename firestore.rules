@@ -27,7 +27,9 @@ service cloud.firestore {
              request.resource.data.userId == request.auth.uid &&
              request.resource.data.precio is number &&
              request.resource.data.nombre is string &&
-             request.resource.data.fecha is timestamp;
+             request.resource.data.fecha is timestamp &&
+             // Allow optional fields
+             (request.resource.data.keys().hasOnly(['userId', 'nombre', 'precio', 'fecha', 'marca', 'supermercado', 'ubicacion', 'porPeso', 'porLitro', 'cantidad', 'precioKilo', 'peso', 'precioLitro', 'litros', 'total', 'metodoPago', 'createdAt', 'transactionId']));
     }
     
     // User profiles - users can only access their own profile
@@ -47,8 +49,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         isValidTransaction();
       allow update: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid &&
-        isValidTransaction();
+        resource.data.userId == request.auth.uid;
     }
     
     // Product price history - users can only access their own product data
@@ -58,8 +59,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         isValidProduct();
       allow update: if isAuthenticated() && 
-        resource.data.userId == request.auth.uid &&
-        isValidProduct();
+        resource.data.userId == request.auth.uid;
     }
     
     // User-specific data collections

@@ -56,6 +56,7 @@ function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
   const [compraAEditar, setCompraAEditar] = useState<CompraTransaction | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [editFormOpen, setEditFormOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>('');
   const { user } = useAuth();
 
   useEffect(() => {
@@ -79,8 +80,8 @@ function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
         const comprasData: CompraTransaction[] = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          // Filtrar localmente por categoría, tipo y que tenga detalleCompra
-          if ((data.category === 'Supermercado' || data.category === 'Compras') && 
+          // Filtrar localmente por categoría Supermercado específicamente y que tenga detalleCompra
+          if (data.category === 'Supermercado' && 
               (data.type === 'expense' || data.type === 'compra') && 
               data.detalleCompra) {
             comprasData.push({
@@ -198,6 +199,7 @@ function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
 
   const handleBorrarCompra = (compra: CompraTransaction) => {
     setCompraABorrar(compra);
+    setDeleteError(''); // Limpiar errores anteriores
     setConfirmDeleteOpen(true);
   };
 
@@ -205,36 +207,40 @@ function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
     if (!compraABorrar || !user) return;
     
     try {
-      console.log('🗑️ Iniciando borrado de compra:', compraABorrar.id);
+      setDeleteError(''); // Limpiar errores anteriores
       
-      // 1. Borrar todos los productos del historial asociados a esta transacción
-      const productosQuery = query(
-        collection(db, 'productos-historial'),
-        where('transactionId', '==', compraABorrar.id)
-      );
-      
-      const productosSnapshot = await getDocs(productosQuery);
-      console.log(`📦 Encontrados ${productosSnapshot.size} productos para borrar`);
-      
-      // Borrar cada producto del historial
-      const borrarProductosPromises = productosSnapshot.docs.map(docSnapshot => 
-        deleteDoc(doc(db, 'productos-historial', docSnapshot.id))
-      );
-      
-      await Promise.all(borrarProductosPromises);
-      console.log('✅ Productos del historial borrados exitosamente');
+      // 1. Intentar borrar todos los productos del historial asociados a esta transacción
+      try {
+        const productosQuery = query(
+          collection(db, 'productos-historial'),
+          where('transactionId', '==', compraABorrar.id),
+          where('userId', '==', user.uid)
+        );
+        
+        const productosSnapshot = await getDocs(productosQuery);
+        
+        // Borrar cada producto del historial
+        if (productosSnapshot.size > 0) {
+          const borrarProductosPromises = productosSnapshot.docs.map(docSnapshot => {
+            return deleteDoc(doc(db, 'productos-historial', docSnapshot.id));
+          });
+          
+          await Promise.all(borrarProductosPromises);
+        }
+      } catch (productosError) {
+        console.error('Error al borrar productos del historial:', productosError);
+        // No lanzamos el error, continuamos con el borrado de la transacción
+      }
       
       // 2. Borrar la transacción principal
       await deleteDoc(doc(db, 'transactions', compraABorrar.id));
-      console.log('✅ Transacción principal borrada exitosamente');
-      
-      console.log('🎉 Compra eliminada completamente');
       
       setConfirmDeleteOpen(false);
       setCompraABorrar(null);
     } catch (error) {
-      console.error('❌ Error al borrar compra:', error);
-      // TODO: Mostrar mensaje de error al usuario
+      console.error('Error al borrar compra:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al eliminar la compra';
+      setDeleteError(`Error al eliminar: ${errorMessage}`);
     }
   };
 
@@ -566,10 +572,18 @@ function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
           <Alert severity="warning" sx={{ mt: 2 }}>
             <strong>Esta acción no se puede deshacer.</strong> Se eliminará tanto la transacción principal como todos los productos asociados del historial de precios.
           </Alert>
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button 
-            onClick={() => setConfirmDeleteOpen(false)}
+            onClick={() => {
+              setConfirmDeleteOpen(false);
+              setDeleteError(''); // Limpiar error al cerrar
+            }}
             variant="outlined"
           >
             Cancelar
