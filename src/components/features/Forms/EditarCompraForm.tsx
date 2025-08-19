@@ -76,7 +76,7 @@ export default function EditarCompraForm({ open, compra, onClose, onSave }: Edit
   }, [compra, open]);
 
   const calcularTotalCompra = () => {
-    return productos.reduce((total, producto) => total + producto.total, 0);
+    return Math.round(productos.reduce((total, producto) => total + producto.total, 0));
   };
 
   const eliminarProducto = (index: number) => {
@@ -202,6 +202,8 @@ export default function EditarCompraForm({ open, compra, onClose, onSave }: Edit
       onClose={onClose}
       maxWidth="md"
       fullWidth
+      keepMounted={false}
+      disableRestoreFocus
       PaperProps={{
         sx: { minHeight: '80vh' }
       }}

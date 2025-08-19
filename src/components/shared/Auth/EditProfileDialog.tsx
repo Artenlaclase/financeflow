@@ -74,7 +74,14 @@ export default function EditProfileDialog({ open, onClose }: EditProfileDialogPr
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="sm" 
+      fullWidth
+      keepMounted={false}
+      disableRestoreFocus
+    >
       <DialogTitle>
         <Typography variant="h6">
           {profile ? 'Editar Perfil' : 'Completar Perfil'}

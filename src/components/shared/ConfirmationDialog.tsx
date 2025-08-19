@@ -36,6 +36,8 @@ export default function ConfirmationDialog({
     <Dialog
       open={open}
       onClose={onCancel}
+      keepMounted={false}
+      disableRestoreFocus
       aria-labelledby="confirmation-dialog-title"
       aria-describedby="confirmation-dialog-description"
     >

@@ -143,7 +143,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         return;
       }
       precio = precioKilo;
-      total = precioKilo * cantidad; // cantidad = kg
+      total = Math.round(precioKilo * cantidad); // cantidad = kg, redondeado
     } else if (unidadProducto === 'litro') {
       if (!precioLitroProducto) {
         setError('Ingresa el precio por litro');
@@ -155,7 +155,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         return;
       }
       precio = precioLitro;
-      total = precioLitro * cantidad; // cantidad = litros
+      total = Math.round(precioLitro * cantidad); // cantidad = litros, redondeado
     } else {
       if (!precioProducto) {
         setError('Ingresa el precio del producto');
@@ -167,7 +167,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         return;
       }
       precio = precioUnidad;
-      total = precioUnidad * cantidad; // cantidad = unidades
+      total = Math.round(precioUnidad * cantidad); // cantidad = unidades, redondeado
     }
 
     const nuevoProducto: ProductoCompra = {
@@ -205,7 +205,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   };
 
   const calcularTotal = () => {
-    return productos.reduce((total, producto) => total + producto.total, 0);
+    return Math.round(productos.reduce((total, producto) => total + producto.total, 0));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -328,7 +328,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      keepMounted={false}
+      disableRestoreFocus
+    >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <ShoppingCart />
         Nueva Compra de Supermercado

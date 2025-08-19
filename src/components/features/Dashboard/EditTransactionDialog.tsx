@@ -117,7 +117,14 @@ export default function EditTransactionDialog({
   const categories = transaction?.type === 'income' ? incomeCategories : expenseCategories;
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="sm" 
+      fullWidth
+      keepMounted={false}
+      disableRestoreFocus
+    >
       <DialogTitle>
         Editar {transaction?.type === 'income' ? 'Ingreso' : 'Gasto'}
       </DialogTitle>

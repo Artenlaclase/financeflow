@@ -119,7 +119,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       limit(10)
     );
     const unsubscribeIncome = onSnapshot(incomeQuery, (snapshot) => {
-      const legacyIncomeTotal = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
+      const legacyIncomeTotal = Math.round(snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0));
       
       // Crear array de transacciones de ingresos legacy
       const incomeTransactions = snapshot.docs.map(doc => {
@@ -161,7 +161,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       limit(10)
     );
     const unsubscribeExpenses = onSnapshot(expensesQuery, (snapshot) => {
-      const legacyExpensesTotal = snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0);
+      const legacyExpensesTotal = Math.round(snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0));
       
       // Crear array de transacciones de gastos legacy
       const expenseTransactions = snapshot.docs.map(doc => {

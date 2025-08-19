@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import {
   Paper,
   Typography,
@@ -46,7 +46,7 @@ interface HistorialComprasProps {
   refreshTrigger: number;
 }
 
-export default function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
+function HistorialCompras({ refreshTrigger }: HistorialComprasProps) {
   const [compras, setCompras] = useState<CompraTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
@@ -59,12 +59,13 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
   const { user } = useAuth();
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.uid) {
       setLoading(false);
       return;
     }
 
     console.log('Setting up compras listener for user:', user.uid);
+    setLoading(true);
 
     // Versión simplificada - solo filtrar por userId primero
     const q = query(
@@ -118,7 +119,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
       unsubscribe();
       clearTimeout(timeout);
     };
-  }, [user, refreshTrigger]);
+  }, [user?.uid, refreshTrigger]);
 
   const toggleExpanded = (compraId: string) => {
     const newExpanded = new Set(expandedCards);
@@ -150,7 +151,7 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
   };
 
   const calcularEstadisticas = () => {
-    const totalGastado = compras.reduce((sum, compra) => sum + compra.amount, 0);
+    const totalGastado = Math.round(compras.reduce((sum, compra) => sum + compra.amount, 0));
     const totalProductos = compras.reduce((sum, compra) => {
       // Calcular productos desde detalleCompra.productos array length
       const productos = compra.detalleCompra?.productos || (compra as any).productos || [];
@@ -174,12 +175,17 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
       return acc;
     }, {} as Record<string, { cantidad: number; total: number }>);
 
+    // Redondear totales por método de pago
+    Object.keys(porMetodoPago).forEach(metodo => {
+      porMetodoPago[metodo].total = Math.round(porMetodoPago[metodo].total);
+    });
+
     return {
       totalGastado,
       totalProductos,
       totalCompras: compras.length,
       comprasUltimoMes: comprasUltimoMes.length,
-      gastoUltimoMes: comprasUltimoMes.reduce((sum, compra) => sum + compra.amount, 0),
+      gastoUltimoMes: Math.round(comprasUltimoMes.reduce((sum, compra) => sum + compra.amount, 0)),
       porMetodoPago
     };
   };
@@ -479,35 +485,35 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
                           <ListItemText
                             primary={
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="body1" fontWeight="medium">
-                                  {producto.nombre}
-                                </Typography>
+                                <Box>
+                                  <Typography variant="body1" fontWeight="medium">
+                                    {producto.nombre}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                                    {producto.unidad === 'peso' || producto.porPeso ? (
+                                      <>
+                                        <Chip size="small" icon={<Scale />} label={`${producto.pesoTotal || producto.peso || producto.cantidad}kg`} />
+                                        <Chip size="small" label={`$${producto.precioKilo || producto.precioKilo || 'N/A'}/kg`} />
+                                      </>
+                                    ) : producto.unidad === 'litro' || producto.porLitro ? (
+                                      <>
+                                        <Chip size="small" icon={<LocalDrink />} label={`${producto.litrosTotal || producto.litros || producto.cantidad}L`} />
+                                        <Chip size="small" label={`$${producto.precioLitro || producto.precioLitro || 'N/A'}/L`} />
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Chip size="small" label={`Cantidad: ${producto.cantidad}`} />
+                                        <Chip size="small" label={`$${producto.precio} c/u`} />
+                                      </>
+                                    )}
+                                    {producto.marca && (
+                                      <Chip size="small" label={producto.marca} variant="outlined" />
+                                    )}
+                                  </Box>
+                                </Box>
                                 <Typography variant="h6" color="primary">
-                                  ${producto.total.toLocaleString()}
+                                  ${Math.round(producto.total).toLocaleString()}
                                 </Typography>
-                              </Box>
-                            }
-                            secondary={
-                              <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                {producto.unidad === 'peso' || producto.porPeso ? (
-                                  <>
-                                    <Chip size="small" icon={<Scale />} label={`${producto.pesoTotal || producto.peso || producto.cantidad}kg`} />
-                                    <Chip size="small" label={`$${producto.precioKilo || producto.precioKilo || 'N/A'}/kg`} />
-                                  </>
-                                ) : producto.unidad === 'litro' || producto.porLitro ? (
-                                  <>
-                                    <Chip size="small" icon={<LocalDrink />} label={`${producto.litrosTotal || producto.litros || producto.cantidad}L`} />
-                                    <Chip size="small" label={`$${producto.precioLitro || producto.precioLitro || 'N/A'}/L`} />
-                                  </>
-                                ) : (
-                                  <>
-                                    <Chip size="small" label={`Cantidad: ${producto.cantidad}`} />
-                                    <Chip size="small" label={`$${producto.precio} c/u`} />
-                                  </>
-                                )}
-                                {producto.marca && (
-                                  <Chip size="small" label={producto.marca} variant="outlined" />
-                                )}
                               </Box>
                             }
                           />
@@ -528,6 +534,8 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
         onClose={() => setConfirmDeleteOpen(false)}
         maxWidth="sm"
         fullWidth
+        keepMounted={false}
+        disableRestoreFocus
       >
         <DialogTitle>
           🗑️ Confirmar Eliminación
@@ -591,3 +599,5 @@ export default function HistorialCompras({ refreshTrigger }: HistorialComprasPro
     </Box>
   );
 }
+
+export default memo(HistorialCompras);

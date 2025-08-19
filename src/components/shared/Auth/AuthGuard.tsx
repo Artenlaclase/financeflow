@@ -57,7 +57,7 @@ export default function AuthGuard({
         setShowSetup(false);
       }
     }
-  }, [user, profile, authLoading, profileLoading, requireAuth, requireFinanceSetup, router]);
+  }, [user?.uid, profile?.userId, authLoading, profileLoading, requireAuth, requireFinanceSetup, router]);
 
   const handleSetupComplete = () => {
     console.log('🎉 Setup completado, ocultando formulario');
