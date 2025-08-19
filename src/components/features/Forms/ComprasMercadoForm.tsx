@@ -88,6 +88,7 @@ const ubicaciones = [
   { value: 'Peralillo', label: 'Peralillo 📍' },
   { value: 'Litueche', label: 'Litueche 📍' },
   { value: 'Rapel', label: 'Rapel 📍' },
+  { value: 'Navidad', label: 'Navidad 📍' },
   { value: 'Pichilemu', label: 'Pichilemu 📍' }
 ];
 
