@@ -134,7 +134,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       const expensesData: any[] = [];
       
       transactionsSnapshot.docs.forEach(doc => {
-        const data = doc.data();
+        const data = { id: doc.id, ...doc.data() } as any;
         const transactionDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
         
         // Para períodos de año completo, no filtrar por fecha aquí

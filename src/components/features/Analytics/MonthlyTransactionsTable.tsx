@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,8 +13,22 @@ import {
   Paper,
   Chip,
   CircularProgress,
-  Alert
+  Alert,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../../lib/firebase/config';
 import { useAnalytics } from '../../../hooks/useAnalytics';
 import { formatDateForDisplay } from '../../../lib/dateUtils';
 
@@ -23,7 +38,12 @@ interface MonthlyTransactionsTableProps {
 }
 
 export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear }: MonthlyTransactionsTableProps) {
-  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear);
+  const { data, loading, error, refetch } = useAnalytics(selectedPeriod, selectedYear);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [merchant, setMerchant] = useState('');
+  const [method, setMethod] = useState('');
+  const [installments, setInstallments] = useState('');
+  const [saving, setSaving] = useState(false);
 
   if (loading) {
     return (
@@ -98,6 +118,48 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
     return t.installments || t?.detalleCompra?.installments || null;
   };
 
+  const openEdit = (t: any) => {
+    setEditing(t);
+    setMerchant(getMerchant(t) || '');
+    const pm = getPaymentMethod(t) || '';
+    setMethod(pm);
+    const ins = getInstallments(t);
+    setInstallments(ins ? String(ins) : '');
+  };
+
+  const closeEdit = () => {
+    setEditing(null);
+    setMerchant('');
+    setMethod('');
+    setInstallments('');
+    setSaving(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editing?.id) return;
+    setSaving(true);
+    try {
+      const docRef = doc(db, 'transactions', editing.id);
+      const update: any = {};
+      // Persistir merchant a nivel raíz
+      update.merchant = merchant || null;
+      // Persistir método y cuotas a nivel raíz
+      update.paymentMethod = method || null;
+      if (method === 'credito') {
+        const n = parseInt(installments || '0', 10);
+        update.installments = n > 0 ? n : null;
+      } else {
+        update.installments = null;
+      }
+  await updateDoc(docRef, update);
+  await refetch();
+  closeEdit();
+    } catch (e) {
+      console.error('Error updating transaction:', e);
+      setSaving(false);
+    }
+  };
+
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
       <Typography variant="h6" gutterBottom>
@@ -109,8 +171,9 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
           No hay transacciones en este período
         </Typography>
       ) : (
-        <TableContainer>
-          <Table size="small">
+        <>
+          <TableContainer>
+            <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Fecha</TableCell>
@@ -120,6 +183,7 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
                 <TableCell>Pago</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell align="right">Monto</TableCell>
+                <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -167,11 +231,58 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
                       {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
                     </Typography>
                   </TableCell>
+                  <TableCell align="right">
+                    {'id' in transaction && (
+                      <IconButton size="small" onClick={() => openEdit(transaction)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-        </TableContainer>
+            </Table>
+          </TableContainer>
+
+          <Dialog open={!!editing} onClose={closeEdit} maxWidth="sm" fullWidth>
+          <DialogTitle>Editar transacción</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <TextField
+                label="Nombre del establecimiento"
+                value={merchant}
+                onChange={(e) => setMerchant(e.target.value)}
+                fullWidth
+              />
+              <FormControl fullWidth>
+                <InputLabel>Método de pago</InputLabel>
+                <Select value={method} label="Método de pago" onChange={(e) => setMethod(e.target.value)}>
+                  <MenuItem value="">—</MenuItem>
+                  <MenuItem value="efectivo">Efectivo</MenuItem>
+                  <MenuItem value="debito">Débito</MenuItem>
+                  <MenuItem value="credito">Crédito</MenuItem>
+                </Select>
+              </FormControl>
+              {method === 'credito' && (
+                <TextField
+                  label="Número de cuotas"
+                  type="number"
+                  value={installments}
+                  onChange={(e) => setInstallments(e.target.value)}
+                  inputProps={{ min: 1, step: 1 }}
+                  fullWidth
+                />
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeEdit} disabled={saving}>Cancelar</Button>
+            <Button onClick={saveEdit} variant="contained" disabled={saving}>
+              {saving ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </DialogActions>
+          </Dialog>
+        </>
       )}
       
       <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
