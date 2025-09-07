@@ -24,7 +24,7 @@ import { useMonthlyReset } from '../../../hooks/useMonthlyReset';
 import { deleteTransaction, Transaction } from '../../../lib/firebaseUtils';
 import ConfirmationDialog from '../../shared/ConfirmationDialog';
 import EditTransactionDialog from './EditTransactionDialog';
-import { formatDateForDisplay } from '../../../lib/dateUtils';
+import { formatDateForDisplay, safeDate } from '../../../lib/dateUtils';
 
 export default function RecentTransactions() {
   const { recentTransactions } = useFinance();
@@ -43,13 +43,16 @@ export default function RecentTransactions() {
 
   // Filtrar transacciones del mes actual
   const currentMonthTransactions = recentTransactions.filter(transaction => {
-    if (!transaction.date) return false;
-    
-    const transactionDate = transaction.date?.toDate ? transaction.date.toDate() : new Date(transaction.date);
+    if (!transaction?.date) return false;
+    const transactionDate = safeDate(transaction.date);
+    if (!transactionDate) return false;
     const transactionMonth = transactionDate.getMonth();
     const transactionYear = transactionDate.getFullYear();
-    
     return transactionMonth === currentMonth && transactionYear === currentYear;
+  }).sort((a, b) => {
+    const aDate = safeDate(a.date)?.getTime() ?? 0;
+    const bDate = safeDate(b.date)?.getTime() ?? 0;
+    return bDate - aDate; // más recientes primero
   });
 
   // Debug log para ver las transacciones
@@ -299,7 +302,9 @@ export default function RecentTransactions() {
         </Box>
       )}
       
-      <List sx={{ width: '100%' }}>
+  {/* Contenedor scrollable que muestra aprox. 4 filas por defecto */}
+  <Box sx={{ width: '100%', maxHeight: 320, overflowY: 'auto', pr: 1 }}>
+  <List sx={{ width: '100%' }}>
         {currentMonthTransactions.map((transaction: any, index: number) => {
           // Validar datos de la transacción antes de renderizar
           const isValidTransaction = transaction && transaction.id && transaction.type && typeof transaction.amount === 'number';
@@ -393,6 +398,7 @@ export default function RecentTransactions() {
           );
         })}
       </List>
+  </Box>
 
       {/* Menu de acciones */}
       <Menu

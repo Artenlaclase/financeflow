@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase/config';
+import { safeDate } from '../lib/dateUtils';
 import { useAuth } from './AuthContext';
 
 export interface Transaction {
@@ -94,8 +95,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       
       // Ordenar todas las transacciones por fecha (más recientes primero)
       allTransactions.sort((a, b) => {
-        const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || 0);
-        const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || 0);
+        const dateA = safeDate(a.date) || new Date(0);
+        const dateB = safeDate(b.date) || new Date(0);
         return dateB.getTime() - dateA.getTime();
       });
       
@@ -143,8 +144,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           const combined = [...prev, ...incomeTransactions];
           return combined
             .sort((a, b) => {
-              const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || Date.now());
-              const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || Date.now());
+              const dateA = safeDate(a.date) || new Date(0);
+              const dateB = safeDate(b.date) || new Date(0);
               return dateB.getTime() - dateA.getTime();
             })
             .slice(0, 10);
@@ -185,8 +186,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
           const combined = [...prev, ...expenseTransactions];
           return combined
             .sort((a, b) => {
-              const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || Date.now());
-              const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || Date.now());
+              const dateA = safeDate(a.date) || new Date(0);
+              const dateB = safeDate(b.date) || new Date(0);
               return dateB.getTime() - dateA.getTime();
             })
             .slice(0, 10);
@@ -227,8 +228,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       // Ordenar por fecha y limitar a 10
       const sorted = combined
         .sort((a, b) => {
-          const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || Date.now());
-          const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || Date.now());
+          const dateA = safeDate(a.date) || new Date(0);
+          const dateB = safeDate(b.date) || new Date(0);
           return dateB.getTime() - dateA.getTime();
         })
         .slice(0, 10);

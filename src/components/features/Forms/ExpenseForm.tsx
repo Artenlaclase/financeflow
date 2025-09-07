@@ -15,7 +15,7 @@ import {
   Box,
   Alert
 } from '@mui/material';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useFinance } from '../../../contexts/FinanceContext';
@@ -84,6 +84,10 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
     }
 
     try {
+      // Convertir YYYY-MM-DD a Date local al mediodía para evitar desfase
+      const [y, m, d] = date.split('-').map(n => parseInt(n, 10));
+      const localNoon = new Date(y, (m - 1), d, 12, 0, 0, 0);
+
       await addDoc(collection(db, 'transactions'), {
         userId: user.uid,
         type: 'expense',
@@ -91,8 +95,8 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
         category,
         description,
   ...(merchant && { merchant }),
-        date: new Date(date),
-        createdAt: new Date(),
+        date: Timestamp.fromDate(localNoon),
+        createdAt: Timestamp.now(),
         paymentMethod,
         ...(paymentMethod === 'credito' && { installments: parseInt(installments, 10) })
       });
