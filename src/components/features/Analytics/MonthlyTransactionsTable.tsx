@@ -85,6 +85,19 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
     }
   };
 
+  const getMerchant = (t: any) => {
+    return t.merchant || t.supermercado || t?.detalleCompra?.supermercado || '';
+  };
+
+  const getPaymentMethod = (t: any) => {
+    // Aceptar tanto paymentMethod como metodoPago
+    return t.paymentMethod || t.metodoPago || t?.detalleCompra?.metodoPago || '';
+  };
+
+  const getInstallments = (t: any) => {
+    return t.installments || t?.detalleCompra?.installments || null;
+  };
+
   return (
     <Paper sx={{ p: 3, mb: 3 }}>
       <Typography variant="h6" gutterBottom>
@@ -103,6 +116,8 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
                 <TableCell>Fecha</TableCell>
                 <TableCell>Descripción</TableCell>
                 <TableCell>Categoría</TableCell>
+                <TableCell>Establecimiento</TableCell>
+                <TableCell>Pago</TableCell>
                 <TableCell>Tipo</TableCell>
                 <TableCell align="right">Monto</TableCell>
               </TableRow>
@@ -118,6 +133,23 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
                   </TableCell>
                   <TableCell>
                     {transaction.category || 'Sin categoría'}
+                  </TableCell>
+                  <TableCell>
+                    {getMerchant(transaction) || '—'}
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const method = getPaymentMethod(transaction);
+                      const cuotas = getInstallments(transaction);
+                      if (!method) return '—';
+                      if (method === 'credito') {
+                        return `Crédito${cuotas ? ` (${cuotas} cuotas)` : ''}`;
+                      }
+                      if (method === 'debito') return 'Débito';
+                      if (method === 'efectivo') return 'Efectivo';
+                      // fallback para otros valores
+                      return String(method);
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Chip 

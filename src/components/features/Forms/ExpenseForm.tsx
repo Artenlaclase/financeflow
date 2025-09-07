@@ -42,6 +42,9 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [installments, setInstallments] = useState('');
+  const [merchant, setMerchant] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -65,6 +68,21 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
       return;
     }
 
+    if (!paymentMethod) {
+      setError('Selecciona un método de pago');
+      setLoading(false);
+      return;
+    }
+
+    if (paymentMethod === 'credito') {
+      const cuotasNum = parseInt(installments || '0', 10);
+      if (!cuotasNum || cuotasNum < 1) {
+        setError('Ingresa el número de cuotas (mínimo 1)');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       await addDoc(collection(db, 'transactions'), {
         userId: user.uid,
@@ -72,8 +90,11 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
         amount: parseFloat(amount),
         category,
         description,
+  ...(merchant && { merchant }),
         date: new Date(date),
-        createdAt: new Date()
+        createdAt: new Date(),
+        paymentMethod,
+        ...(paymentMethod === 'credito' && { installments: parseInt(installments, 10) })
       });
 
       // Reset form
@@ -81,6 +102,9 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
       setCategory('');
       setDescription('');
       setDate(new Date().toISOString().split('T')[0]);
+  setPaymentMethod('');
+  setInstallments('');
+  setMerchant('');
       
       // Refresh data and close modal
       refreshData();
@@ -97,6 +121,9 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
     setCategory('');
     setDescription('');
     setDate(new Date().toISOString().split('T')[0]);
+  setPaymentMethod('');
+  setInstallments('');
+  setMerchant('');
     setError('');
     onClose();
   };
@@ -143,6 +170,40 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
             multiline
             rows={2}
           />
+
+          <TextField
+            label="Nombre del local/establecimiento (opcional)"
+            value={merchant}
+            onChange={(e) => setMerchant(e.target.value)}
+            fullWidth
+            margin="normal"
+          />
+
+          <FormControl fullWidth margin="normal" required>
+            <InputLabel>Método de pago</InputLabel>
+            <Select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              label="Método de pago"
+            >
+              <MenuItem value="efectivo">Efectivo</MenuItem>
+              <MenuItem value="debito">Débito</MenuItem>
+              <MenuItem value="credito">Crédito</MenuItem>
+            </Select>
+          </FormControl>
+
+          {paymentMethod === 'credito' && (
+            <TextField
+              label="Número de cuotas"
+              type="number"
+              value={installments}
+              onChange={(e) => setInstallments(e.target.value)}
+              fullWidth
+              required
+              margin="normal"
+              inputProps={{ min: 1, step: 1 }}
+            />
+          )}
 
           <TextField
             label="Fecha"

@@ -10,6 +10,9 @@ export interface Transaction {
   description?: string;
   category?: string;
   date: any;
+  paymentMethod?: 'efectivo' | 'debito' | 'credito';
+  installments?: number;
+  merchant?: string;
 }
 
 export const updateTransaction = async (

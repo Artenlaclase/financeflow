@@ -104,6 +104,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const [supermercadoPersonalizado, setSupermercadoPersonalizado] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [metodoPago, setMetodoPago] = useState('');
+  const [cuotas, setCuotas] = useState('');
   const [productos, setProductos] = useState<ProductoCompra[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -223,6 +224,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       return;
     }
 
+    if (metodoPago === 'credito') {
+      const n = parseInt(cuotas || '0', 10);
+      if (!n || n < 1) {
+        setError('Ingresa el número de cuotas (mínimo 1)');
+        return;
+      }
+    }
+
     // Validar supermercado personalizado
     if (supermercado === 'otro' && !supermercadoPersonalizado.trim()) {
       setError('Ingresa el nombre del supermercado personalizado');
@@ -274,12 +283,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         supermercado: supermercadoFinal,
         ubicacion,
         metodoPago,
+        ...(metodoPago === 'credito' && { installments: parseInt(cuotas, 10) }),
         productos: productosLimpios,
         detalleCompra: {
           productos: productosLimpios,
           supermercado: supermercadoFinal,
           ubicacion,
           metodoPago,
+          ...(metodoPago === 'credito' && { installments: parseInt(cuotas, 10) }),
           total: totalCompra
         }, // Estructura compatible con historial
         createdAt: Timestamp.now(),
@@ -340,7 +351,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       setSupermercadoPersonalizado('');
       setUbicacion('');
       setMetodoPago('');
-      setProductos([]);
+  setProductos([]);
       setNombreProducto('');
       setMarcaProducto('');
       setPrecioProducto('');
@@ -349,6 +360,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       setPrecioKiloProducto('');
       setPrecioLitroProducto('');
       setError('');
+  setCuotas('');
 
       onComplete();
       console.log('🎉 Proceso completado - onComplete() llamado');
@@ -450,6 +462,18 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                 ))}
               </Select>
             </FormControl>
+
+            {metodoPago === 'credito' && (
+              <TextField
+                fullWidth
+                label="Número de cuotas"
+                type="number"
+                value={cuotas}
+                onChange={(e) => setCuotas(e.target.value)}
+                inputProps={{ min: 1, step: 1 }}
+                required
+              />
+            )}
           </Box>
 
           {/* Agregar producto */}
