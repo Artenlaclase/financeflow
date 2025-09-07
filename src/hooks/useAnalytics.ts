@@ -22,6 +22,10 @@ export interface AnalyticsData {
   fixedExpensesTotal: number;
   transactionIncomeTotal: number;
   transactionExpensesTotal: number;
+  transactionDetails?: {
+    income: any[];
+    expenses: any[];
+  };
 }
 
 export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
@@ -37,7 +41,11 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
     fixedIncomeTotal: 0,
     fixedExpensesTotal: 0,
     transactionIncomeTotal: 0,
-    transactionExpensesTotal: 0
+    transactionExpensesTotal: 0,
+    transactionDetails: {
+      income: [],
+      expenses: []
+    }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -285,7 +293,11 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         fixedIncomeTotal: fixedIncomeForPeriod,
         fixedExpensesTotal: fixedExpensesForPeriod,
         transactionIncomeTotal: transactionIncome,
-        transactionExpensesTotal: transactionExpenses
+        transactionExpensesTotal: transactionExpenses,
+        transactionDetails: {
+          income: incomeData,
+          expenses: expensesData
+        }
       });
 
     } catch (err) {

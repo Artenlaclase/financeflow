@@ -92,6 +92,10 @@ export default function BalanceCard() {
     .filter(transaction => transaction.type === 'income')
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
+  // Calcular saldo actual: ingresos totales del mes menos gastos fijos pendientes menos gastos variables del mes
+  const totalMonthlyIncome = (profile?.monthlyIncome || 0) + currentMonthIncome;
+  const currentBalance = totalMonthlyIncome - pendingFixedExpenses - currentMonthExpenses;
+
   // Debug logs
   console.log('BalanceCard Debug:', {
     monthlyIncome: profile?.monthlyIncome,
@@ -104,10 +108,6 @@ export default function BalanceCard() {
     currentYear,
     totalTransactions: recentTransactions.length
   });
-
-  // Calcular saldo actual: ingresos totales del mes menos gastos fijos pendientes menos gastos variables del mes
-  const totalMonthlyIncome = (profile?.monthlyIncome || 0) + currentMonthIncome;
-  const currentBalance = totalMonthlyIncome - pendingFixedExpenses - currentMonthExpenses;
 
   // Obtener el nombre del mes actual
   const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' });
@@ -131,7 +131,7 @@ export default function BalanceCard() {
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Ingreso fijo mensual: ${profile?.monthlyIncome.toLocaleString() || '0'}
+            Ingreso fijo mensual: ${profile?.monthlyIncome?.toLocaleString() || '0'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Ingresos variables del mes: ${currentMonthIncome.toLocaleString()}

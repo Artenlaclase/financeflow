@@ -41,10 +41,14 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
     );
   }
 
-  // Combinar todas las transacciones del período
+  // Combinar todas las transacciones del período (con valores por defecto seguros)
+  const transactionDetails = data.transactionDetails || { income: [], expenses: [] };
+  const incomes = transactionDetails.income || [];
+  const expenses = transactionDetails.expenses || [];
+
   const allTransactions = [
-    ...data.transactionDetails.income.map(t => ({ ...t, type: 'income' })),
-    ...data.transactionDetails.expenses.map(t => ({ ...t, type: 'expense' }))
+    ...incomes.map(t => ({ ...t, type: 'income' })),
+    ...expenses.map(t => ({ ...t, type: 'expense' }))
   ].sort((a, b) => {
     const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date);
     const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date);
@@ -140,9 +144,9 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
       
       <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
         <Typography variant="body2" color="text.secondary">
-          <strong>Total de transacciones:</strong> {allTransactions.length} | 
-          <strong> Ingresos:</strong> {data.transactionDetails.income.length} | 
-          <strong> Gastos:</strong> {data.transactionDetails.expenses.length}
+          <strong> Total de transacciones:</strong> {allTransactions.length} | 
+          <strong> Ingresos:</strong> {incomes.length} | 
+          <strong> Gastos:</strong> {expenses.length}
         </Typography>
       </Box>
     </Paper>
