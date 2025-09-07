@@ -5,9 +5,11 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import { useFinanceProfile } from '@/contexts/FinanceProfileContext';
+import { useMonthlyReset } from '../../hooks/useMonthlyReset';
 import BalanceCard from '../../components/features/Dashboard/BalanceCard';
 import QuickActions from '../../components/features/Dashboard/QuickActions';
 import RecentTransactions from '../../components/features/Dashboard/RecentTransactions';
+import FixedExpensesCard from '../../components/features/Dashboard/FixedExpensesCard';
 import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
 import EditProfileDialog from '../../components/shared/Auth/EditProfileDialog';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
@@ -18,6 +20,7 @@ export default function DashboardPage() {
   const { user, logout } = useAuth();
   const { getDisplayName, profile: userProfile } = useUserProfile();
   const { profile } = useFinanceProfile();
+  const { currentMonth, currentYear } = useMonthlyReset();
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -119,9 +122,9 @@ export default function DashboardPage() {
           
           <Grid item xs={12} md={6}>
             <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
-              <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-                Dashboard Financiero
-              </Typography>
+            <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+              Dashboard Financiero - {new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+            </Typography>
             </Box>
           </Grid>
         </Grid>
@@ -277,7 +280,11 @@ export default function DashboardPage() {
           <QuickActions />
         </Grid>
         
-        <Grid item xs={12}>
+        <Grid item xs={12} md={6}>
+          <FixedExpensesCard />
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center',
