@@ -92,16 +92,18 @@ export default function BalanceCard() {
     .filter(transaction => transaction.type === 'income')
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  // Calcular saldo actual: ingresos totales del mes menos gastos fijos pendientes menos gastos variables del mes
+  // Calcular saldo actual: ingresos totales del mes menos gastos fijos del mes menos gastos variables del mes
   const totalMonthlyIncome = (profile?.monthlyIncome || 0) + currentMonthIncome;
-  const currentBalance = totalMonthlyIncome - pendingFixedExpenses - currentMonthExpenses;
+  const fixedExpensesThisMonth = profile?.totalFixedExpenses || 0;
+  const currentBalance = totalMonthlyIncome - fixedExpensesThisMonth - currentMonthExpenses;
 
   // Debug logs
   console.log('BalanceCard Debug:', {
     monthlyIncome: profile?.monthlyIncome,
     currentMonthIncome,
     totalMonthlyIncome,
-    pendingFixedExpenses,
+  pendingFixedExpenses,
+  fixedExpensesThisMonth,
     currentMonthExpenses,
     currentBalance,
     currentMonth,
