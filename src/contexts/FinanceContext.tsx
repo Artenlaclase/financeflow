@@ -93,16 +93,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         transactions: allTransactions
       });
       
-      // Ordenar todas las transacciones por fecha (más recientes primero)
+  // Ordenar todas las transacciones por fecha (más recientes primero)
       allTransactions.sort((a, b) => {
         const dateA = safeDate(a.date) || new Date(0);
         const dateB = safeDate(b.date) || new Date(0);
         return dateB.getTime() - dateA.getTime();
       });
       
-      setIncome(totalIncome);
-      setExpenses(totalExpenses);
-      setRecentTransactions(allTransactions.slice(0, 10)); // Tomar solo las 10 más recientes
+  setIncome(totalIncome);
+  setExpenses(totalExpenses);
+  setRecentTransactions(allTransactions); // Mantener todas para que el dashboard filtre por mes
     }, (error) => {
       console.error('❌ Error fetching global transactions:', error);
       console.error('❌ Error details:', {
@@ -147,8 +147,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
               const dateA = safeDate(a.date) || new Date(0);
               const dateB = safeDate(b.date) || new Date(0);
               return dateB.getTime() - dateA.getTime();
-            })
-            .slice(0, 10);
+            });
         });
       }
     }, (error) => {
@@ -189,8 +188,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
               const dateA = safeDate(a.date) || new Date(0);
               const dateB = safeDate(b.date) || new Date(0);
               return dateB.getTime() - dateA.getTime();
-            })
-            .slice(0, 10);
+            });
         });
       }
     }, (error) => {
@@ -225,14 +223,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       // Combinar con las nuevas transacciones
       const combined = [...filtered, ...newTransactions];
       
-      // Ordenar por fecha y limitar a 10
+      // Ordenar por fecha
       const sorted = combined
         .sort((a, b) => {
           const dateA = safeDate(a.date) || new Date(0);
           const dateB = safeDate(b.date) || new Date(0);
           return dateB.getTime() - dateA.getTime();
-        })
-        .slice(0, 10);
+        });
       
       console.log('Updated recent transactions:', sorted);
       return sorted;
