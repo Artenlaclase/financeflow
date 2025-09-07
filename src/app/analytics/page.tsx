@@ -9,7 +9,8 @@ import ExpensesByCategoryChart from '../../components/features/Analytics/Expense
 import MonthlyTrendChart from '../../components/features/Analytics/MonthlyTrendChart';
 import AnnualOverviewChart from '../../components/features/Analytics/AnnualOverviewChart';
 import AnalyticsSummary from '../../components/features/Analytics/AnalyticsSummary';
-import { useAnalytics } from '../../hooks/useAnalyticsSimplified';
+import MonthlyTransactionsTable from '../../components/features/Analytics/MonthlyTransactionsTable';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 export default function AnalyticsPage() {
   const router = useRouter();
@@ -179,6 +180,11 @@ export default function AnalyticsPage() {
                 <MonthlyTrendChart selectedPeriod={selectedPeriod} selectedYear={selectedYear} />
               </CardContent>
             </Card>
+          </Grid>
+
+          {/* Tabla de transacciones */}
+          <Grid item xs={12}>
+            <MonthlyTransactionsTable selectedPeriod={selectedPeriod} selectedYear={selectedYear} />
           </Grid>
 
           {/* Resumen anual */}

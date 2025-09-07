@@ -19,7 +19,7 @@ interface FixedExpensePayment {
 }
 
 export default function BalanceCard() {
-  const { expenses, income } = useFinance();
+  const { expenses, income, recentTransactions } = useFinance();
   const { profile } = useFinanceProfile();
   const { user } = useAuth();
   const { currentMonth, currentYear } = useMonthlyReset();
@@ -68,8 +68,46 @@ export default function BalanceCard() {
   // Calcular gastos fijos pendientes
   const pendingFixedExpenses = profile ? profile.totalFixedExpenses - paidFixedExpenses : 0;
 
-  // Calcular saldo actual: ingreso fijo mensual menos gastos fijos pendientes menos gastos variables
-  const currentBalance = profile ? profile.monthlyIncome - pendingFixedExpenses - expenses : 0;
+  // Filtrar gastos del mes actual
+  const currentMonthExpenses = recentTransactions
+    .filter(transaction => {
+      if (!transaction.date) return false;
+      const transactionDate = transaction.date?.toDate ? transaction.date.toDate() : new Date(transaction.date);
+      const transactionMonth = transactionDate.getMonth();
+      const transactionYear = transactionDate.getFullYear();
+      return transactionMonth === currentMonth && transactionYear === currentYear;
+    })
+    .filter(transaction => transaction.type === 'expense' || transaction.type === 'compra')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+  // Calcular ingresos del mes actual
+  const currentMonthIncome = recentTransactions
+    .filter(transaction => {
+      if (!transaction.date) return false;
+      const transactionDate = transaction.date?.toDate ? transaction.date.toDate() : new Date(transaction.date);
+      const transactionMonth = transactionDate.getMonth();
+      const transactionYear = transactionDate.getFullYear();
+      return transactionMonth === currentMonth && transactionYear === currentYear;
+    })
+    .filter(transaction => transaction.type === 'income')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+  // Debug logs
+  console.log('BalanceCard Debug:', {
+    monthlyIncome: profile?.monthlyIncome,
+    currentMonthIncome,
+    totalMonthlyIncome,
+    pendingFixedExpenses,
+    currentMonthExpenses,
+    currentBalance,
+    currentMonth,
+    currentYear,
+    totalTransactions: recentTransactions.length
+  });
+
+  // Calcular saldo actual: ingresos totales del mes menos gastos fijos pendientes menos gastos variables del mes
+  const totalMonthlyIncome = (profile?.monthlyIncome || 0) + currentMonthIncome;
+  const currentBalance = totalMonthlyIncome - pendingFixedExpenses - currentMonthExpenses;
 
   // Obtener el nombre del mes actual
   const currentMonthName = new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' });
@@ -96,10 +134,13 @@ export default function BalanceCard() {
             Ingreso fijo mensual: ${profile?.monthlyIncome.toLocaleString() || '0'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
+            Ingresos variables del mes: ${currentMonthIncome.toLocaleString()}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
             Gastos fijos pendientes: ${pendingFixedExpenses.toLocaleString()}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Gastos variables: ${expenses.toLocaleString()}
+            Gastos variables del mes: ${currentMonthExpenses.toLocaleString()}
           </Typography>
         </Box>
 

@@ -129,12 +129,24 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         const data = doc.data();
         const transactionDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
         
-        // Filtrar por fecha
-        if (transactionDate >= startDate && transactionDate <= endDate) {
-          if (data.type === 'income') {
-            incomeData.push(data);
-          } else if (data.type === 'expense') {
-            expensesData.push(data);
+        // Para períodos de año completo, no filtrar por fecha aquí
+        // Solo filtrar por año para incluir todos los meses
+        if (selectedPeriod === 'thisYear' || selectedPeriod === 'custom') {
+          if (transactionDate.getFullYear() === selectedYear) {
+            if (data.type === 'income') {
+              incomeData.push(data);
+            } else if (data.type === 'expense' || data.type === 'compra') {
+              expensesData.push(data);
+            }
+          }
+        } else {
+          // Para otros períodos, usar el filtrado por fecha original
+          if (transactionDate >= startDate && transactionDate <= endDate) {
+            if (data.type === 'income') {
+              incomeData.push(data);
+            } else if (data.type === 'expense' || data.type === 'compra') {
+              expensesData.push(data);
+            }
           }
         }
       });
@@ -143,7 +155,8 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         income: incomeData.length,
         expenses: expensesData.length,
         period: selectedPeriod,
-        dateRange: { startDate, endDate }
+        dateRange: { startDate, endDate },
+        selectedYear
       });
 
       // Calcular totales incluyendo datos del perfil financiero
@@ -202,25 +215,46 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       // Determinar qué meses incluir según el período
       let monthsToInclude: number[] = [];
       if (selectedPeriod === 'thisYear' || selectedPeriod === 'custom') {
+        // Para año completo, incluir todos los meses del año seleccionado
         monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
       } else {
-        // Para otros períodos, calcular los meses relevantes
+        // Para otros períodos, calcular los meses relevantes dentro del año seleccionado
         const monthStart = startDate.getMonth();
         const monthEnd = endDate.getMonth();
-        if (monthStart <= monthEnd) {
-          monthsToInclude = Array.from({ length: monthEnd - monthStart + 1 }, (_, i) => monthStart + i);
+        const yearStart = startDate.getFullYear();
+        const yearEnd = endDate.getFullYear();
+        
+        if (yearStart === yearEnd) {
+          // Mismo año
+          if (monthStart <= monthEnd) {
+            monthsToInclude = Array.from({ length: monthEnd - monthStart + 1 }, (_, i) => monthStart + i);
+          } else {
+            // Caso de año cruzado (no debería pasar con mismo año)
+            monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
+          }
         } else {
-          // Caso de año cruzado
-          monthsToInclude = [
-            ...Array.from({ length: 12 - monthStart }, (_, i) => monthStart + i),
-            ...Array.from({ length: monthEnd + 1 }, (_, i) => i)
-          ];
+          // Años diferentes - incluir todos los meses del año seleccionado
+          monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
         }
       }
 
+      console.log('📊 Months to include:', monthsToInclude);
+      
       monthsToInclude.forEach(monthIndex => {
-        const monthIncomes = incomeData.filter((item: any) => item.date.getMonth() === monthIndex);
-        const monthExpenses = expensesData.filter((item: any) => item.date.getMonth() === monthIndex);
+        const monthIncomes = incomeData.filter((item: any) => {
+          const itemDate = item.date?.toDate ? item.date.toDate() : new Date(item.date);
+          return itemDate.getMonth() === monthIndex && itemDate.getFullYear() === selectedYear;
+        });
+        const monthExpenses = expensesData.filter((item: any) => {
+          const itemDate = item.date?.toDate ? item.date.toDate() : new Date(item.date);
+          return itemDate.getMonth() === monthIndex && itemDate.getFullYear() === selectedYear;
+        });
+        
+        console.log(`📊 Month ${monthIndex}:`, {
+          incomes: monthIncomes.length,
+          expenses: monthExpenses.length,
+          year: selectedYear
+        });
         
         const monthTransactionIncomeTotal = monthIncomes.reduce((sum: number, item: any) => sum + item.amount, 0);
         const monthTransactionExpenseTotal = monthExpenses.reduce((sum: number, item: any) => sum + item.amount, 0);

@@ -3,7 +3,7 @@
 import { Box, Typography, CircularProgress, List, ListItem, ListItemText, Chip, useMediaQuery, useTheme, Fade } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { useState, useEffect, useRef } from 'react';
-import { useAnalytics } from '../../../hooks/useAnalyticsSimplified';
+import { useAnalytics } from '../../../hooks/useAnalytics';
 
 interface ExpensesByCategoryChartProps {
   selectedPeriod: string;
