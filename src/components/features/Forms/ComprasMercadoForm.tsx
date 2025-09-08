@@ -90,6 +90,7 @@ const ubicaciones = [
   { value: 'Rapel', label: 'Rapel 📍' },
   { value: 'Navidad', label: 'Navidad 📍' },
   { value: 'Pichilemu', label: 'Pichilemu 📍' }
+  ,{ value: 'Melipilla', label: 'Melipilla 📍' }
 ];
 
 const metodosPago = [
@@ -105,6 +106,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const [ubicacion, setUbicacion] = useState('');
   const [metodoPago, setMetodoPago] = useState('');
   const [cuotas, setCuotas] = useState('');
+  const [fecha, setFecha] = useState<string>('');
   const [productos, setProductos] = useState<ProductoCompra[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -241,7 +243,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     setLoading(true);
     setError('');
 
-    try {
+  try {
       const totalCompra = calcularTotal();
       
       // Validar que el total sea un número válido
@@ -273,6 +275,13 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         return productoLimpio;
       });
 
+      // Determinar fecha seleccionada (YYYY-MM-DD) como mediodía local
+      let fechaCompraDate: Date = new Date();
+      if (fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [y, m, d] = fecha.split('-').map((n) => parseInt(n, 10));
+        fechaCompraDate = new Date(y, m - 1, d, 12, 0, 0, 0);
+      }
+
       const transactionData = {
         type: 'expense',
         category: 'Supermercado', // Corregido: debe ser 'Supermercado' para compras detalladas
@@ -294,7 +303,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
           total: totalCompra
         }, // Estructura compatible con historial
         createdAt: Timestamp.now(),
-        date: Timestamp.now()
+        date: Timestamp.fromDate(fechaCompraDate)
       };
 
       console.log('💾 Guardando transacción...', {
@@ -319,7 +328,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         marca: producto.marca || '',
         supermercado: supermercadoFinal,
         ubicacion: ubicacion || '',
-        fecha: Timestamp.now(),
+        fecha: Timestamp.fromDate(fechaCompraDate),
         porPeso: producto.unidad === 'peso',
         porLitro: producto.unidad === 'litro',
         precio: Number(producto.precio) || 0,
@@ -408,6 +417,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
 
           {/* Datos de la compra */}
           <Box sx={{ display: 'grid', gap: 2, mb: 3 }}>
+            <TextField
+              fullWidth
+              label="Fecha"
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
             <FormControl fullWidth required>
               <InputLabel>Supermercado</InputLabel>
               <Select
