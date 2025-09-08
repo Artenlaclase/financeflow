@@ -57,10 +57,8 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
 
     switch (period) {
       case 'thisMonth':
-        // Ampliar temporalmente para debug - usar todo el año
-        startDate = new Date(now.getFullYear(), 0, 1);
-        endDate = new Date(now.getFullYear(), 11, 31);
-        console.log('🔍 DEBUG: Using full year instead of thisMonth for debugging');
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         break;
       case 'lastMonth':
         startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);

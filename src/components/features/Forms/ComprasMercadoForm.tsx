@@ -90,6 +90,7 @@ const ubicaciones = [
   { value: 'Rapel', label: 'Rapel 📍' },
   { value: 'Navidad', label: 'Navidad 📍' },
   { value: 'Pichilemu', label: 'Pichilemu 📍' }
+  ,{ value: 'Melipilla', label: 'Melipilla 📍' }
 ];
 
 const metodosPago = [
@@ -104,6 +105,8 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const [supermercadoPersonalizado, setSupermercadoPersonalizado] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [metodoPago, setMetodoPago] = useState('');
+  const [cuotas, setCuotas] = useState('');
+  const [fecha, setFecha] = useState<string>('');
   const [productos, setProductos] = useState<ProductoCompra[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -223,6 +226,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       return;
     }
 
+    if (metodoPago === 'credito') {
+      const n = parseInt(cuotas || '0', 10);
+      if (!n || n < 1) {
+        setError('Ingresa el número de cuotas (mínimo 1)');
+        return;
+      }
+    }
+
     // Validar supermercado personalizado
     if (supermercado === 'otro' && !supermercadoPersonalizado.trim()) {
       setError('Ingresa el nombre del supermercado personalizado');
@@ -232,7 +243,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     setLoading(true);
     setError('');
 
-    try {
+  try {
       const totalCompra = calcularTotal();
       
       // Validar que el total sea un número válido
@@ -264,6 +275,13 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         return productoLimpio;
       });
 
+      // Determinar fecha seleccionada (YYYY-MM-DD) como mediodía local
+      let fechaCompraDate: Date = new Date();
+      if (fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+        const [y, m, d] = fecha.split('-').map((n) => parseInt(n, 10));
+        fechaCompraDate = new Date(y, m - 1, d, 12, 0, 0, 0);
+      }
+
       const transactionData = {
         type: 'expense',
         category: 'Supermercado', // Corregido: debe ser 'Supermercado' para compras detalladas
@@ -274,16 +292,18 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         supermercado: supermercadoFinal,
         ubicacion,
         metodoPago,
+        ...(metodoPago === 'credito' && { installments: parseInt(cuotas, 10) }),
         productos: productosLimpios,
         detalleCompra: {
           productos: productosLimpios,
           supermercado: supermercadoFinal,
           ubicacion,
           metodoPago,
+          ...(metodoPago === 'credito' && { installments: parseInt(cuotas, 10) }),
           total: totalCompra
         }, // Estructura compatible con historial
         createdAt: Timestamp.now(),
-        date: Timestamp.now()
+        date: Timestamp.fromDate(fechaCompraDate)
       };
 
       console.log('💾 Guardando transacción...', {
@@ -308,7 +328,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         marca: producto.marca || '',
         supermercado: supermercadoFinal,
         ubicacion: ubicacion || '',
-        fecha: Timestamp.now(),
+        fecha: Timestamp.fromDate(fechaCompraDate),
         porPeso: producto.unidad === 'peso',
         porLitro: producto.unidad === 'litro',
         precio: Number(producto.precio) || 0,
@@ -340,7 +360,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       setSupermercadoPersonalizado('');
       setUbicacion('');
       setMetodoPago('');
-      setProductos([]);
+  setProductos([]);
       setNombreProducto('');
       setMarcaProducto('');
       setPrecioProducto('');
@@ -349,6 +369,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       setPrecioKiloProducto('');
       setPrecioLitroProducto('');
       setError('');
+  setCuotas('');
 
       onComplete();
       console.log('🎉 Proceso completado - onComplete() llamado');
@@ -396,6 +417,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
 
           {/* Datos de la compra */}
           <Box sx={{ display: 'grid', gap: 2, mb: 3 }}>
+            <TextField
+              fullWidth
+              label="Fecha"
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
             <FormControl fullWidth required>
               <InputLabel>Supermercado</InputLabel>
               <Select
@@ -450,6 +479,18 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                 ))}
               </Select>
             </FormControl>
+
+            {metodoPago === 'credito' && (
+              <TextField
+                fullWidth
+                label="Número de cuotas"
+                type="number"
+                value={cuotas}
+                onChange={(e) => setCuotas(e.target.value)}
+                inputProps={{ min: 1, step: 1 }}
+                required
+              />
+            )}
           </Box>
 
           {/* Agregar producto */}

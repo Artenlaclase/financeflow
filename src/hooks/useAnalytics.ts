@@ -22,9 +22,13 @@ export interface AnalyticsData {
   fixedExpensesTotal: number;
   transactionIncomeTotal: number;
   transactionExpensesTotal: number;
+  transactionDetails?: {
+    income: any[];
+    expenses: any[];
+  };
 }
 
-export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
+export const useAnalytics = (selectedPeriod: string, selectedYear: number, selectedMonth?: number) => {
   const { user } = useAuth();
   const { profile } = useFinanceProfile();
   const [data, setData] = useState<AnalyticsData>({
@@ -37,12 +41,16 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
     fixedIncomeTotal: 0,
     fixedExpensesTotal: 0,
     transactionIncomeTotal: 0,
-    transactionExpensesTotal: 0
+    transactionExpensesTotal: 0,
+    transactionDetails: {
+      income: [],
+      expenses: []
+    }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getDateRange = (period: string, year: number) => {
+  const getDateRange = (period: string, year: number, month?: number) => {
     const now = new Date();
     let startDate: Date;
     let endDate: Date;
@@ -67,6 +75,16 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       case 'thisYear':
         startDate = new Date(year, 0, 1);
         endDate = new Date(year, 11, 31);
+        break;
+      case 'custom':
+        // Si se especifica un mes, usar ese mes del año seleccionado; si no, todo el año
+        if (typeof month === 'number' && month >= 0 && month <= 11) {
+          startDate = new Date(year, month, 1);
+          endDate = new Date(year, month + 1, 0);
+        } else {
+          startDate = new Date(year, 0, 1);
+          endDate = new Date(year, 11, 31);
+        }
         break;
       default:
         startDate = new Date(year, 0, 1);
@@ -109,7 +127,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
     setError(null);
 
     try {
-      const { startDate, endDate } = getDateRange(selectedPeriod, selectedYear);
+  const { startDate, endDate } = getDateRange(selectedPeriod, selectedYear, selectedMonth);
       console.log('📊 Analytics date range:', { startDate, endDate });
 
       // Consultar transacciones de la colección global
@@ -126,15 +144,34 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       const expensesData: any[] = [];
       
       transactionsSnapshot.docs.forEach(doc => {
-        const data = doc.data();
+        const data = { id: doc.id, ...doc.data() } as any;
         const transactionDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
         
-        // Filtrar por fecha
-        if (transactionDate >= startDate && transactionDate <= endDate) {
-          if (data.type === 'income') {
-            incomeData.push(data);
-          } else if (data.type === 'expense') {
-            expensesData.push(data);
+        // Para año completo, incluir todo el año; para custom con mes, filtrar por mes y año
+        if (selectedPeriod === 'thisYear' || selectedPeriod === 'custom') {
+          if (typeof selectedMonth === 'number' && selectedPeriod === 'custom') {
+            if (transactionDate.getFullYear() === selectedYear && transactionDate.getMonth() === selectedMonth) {
+              if (data.type === 'income') {
+                incomeData.push(data);
+              } else if (data.type === 'expense' || data.type === 'compra') {
+                expensesData.push(data);
+              }
+            }
+          } else if (transactionDate.getFullYear() === selectedYear) {
+            if (data.type === 'income') {
+              incomeData.push(data);
+            } else if (data.type === 'expense' || data.type === 'compra') {
+              expensesData.push(data);
+            }
+          }
+        } else {
+          // Para otros períodos, usar el filtrado por fecha original
+          if (transactionDate >= startDate && transactionDate <= endDate) {
+            if (data.type === 'income') {
+              incomeData.push(data);
+            } else if (data.type === 'expense' || data.type === 'compra') {
+              expensesData.push(data);
+            }
           }
         }
       });
@@ -143,7 +180,8 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         income: incomeData.length,
         expenses: expensesData.length,
         period: selectedPeriod,
-        dateRange: { startDate, endDate }
+        dateRange: { startDate, endDate },
+        selectedYear
       });
 
       // Calcular totales incluyendo datos del perfil financiero
@@ -202,25 +240,51 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       // Determinar qué meses incluir según el período
       let monthsToInclude: number[] = [];
       if (selectedPeriod === 'thisYear' || selectedPeriod === 'custom') {
-        monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
+        if (selectedPeriod === 'custom' && typeof selectedMonth === 'number') {
+          // Custom de un mes: solo ese mes
+          monthsToInclude = [selectedMonth];
+        } else {
+          // Año completo: incluir todos los meses
+          monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
+        }
       } else {
-        // Para otros períodos, calcular los meses relevantes
+        // Para otros períodos, calcular los meses relevantes dentro del año seleccionado
         const monthStart = startDate.getMonth();
         const monthEnd = endDate.getMonth();
-        if (monthStart <= monthEnd) {
-          monthsToInclude = Array.from({ length: monthEnd - monthStart + 1 }, (_, i) => monthStart + i);
+        const yearStart = startDate.getFullYear();
+        const yearEnd = endDate.getFullYear();
+        
+        if (yearStart === yearEnd) {
+          // Mismo año
+          if (monthStart <= monthEnd) {
+            monthsToInclude = Array.from({ length: monthEnd - monthStart + 1 }, (_, i) => monthStart + i);
+          } else {
+            // Caso de año cruzado (no debería pasar con mismo año)
+            monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
+          }
         } else {
-          // Caso de año cruzado
-          monthsToInclude = [
-            ...Array.from({ length: 12 - monthStart }, (_, i) => monthStart + i),
-            ...Array.from({ length: monthEnd + 1 }, (_, i) => i)
-          ];
+          // Años diferentes - incluir todos los meses del año seleccionado
+          monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
         }
       }
 
+      console.log('📊 Months to include:', monthsToInclude);
+      
       monthsToInclude.forEach(monthIndex => {
-        const monthIncomes = incomeData.filter((item: any) => item.date.getMonth() === monthIndex);
-        const monthExpenses = expensesData.filter((item: any) => item.date.getMonth() === monthIndex);
+        const monthIncomes = incomeData.filter((item: any) => {
+          const itemDate = item.date?.toDate ? item.date.toDate() : new Date(item.date);
+          return itemDate.getMonth() === monthIndex && itemDate.getFullYear() === selectedYear;
+        });
+        const monthExpenses = expensesData.filter((item: any) => {
+          const itemDate = item.date?.toDate ? item.date.toDate() : new Date(item.date);
+          return itemDate.getMonth() === monthIndex && itemDate.getFullYear() === selectedYear;
+        });
+        
+        console.log(`📊 Month ${monthIndex}:`, {
+          incomes: monthIncomes.length,
+          expenses: monthExpenses.length,
+          year: selectedYear
+        });
         
         const monthTransactionIncomeTotal = monthIncomes.reduce((sum: number, item: any) => sum + item.amount, 0);
         const monthTransactionExpenseTotal = monthExpenses.reduce((sum: number, item: any) => sum + item.amount, 0);
@@ -251,7 +315,11 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         fixedIncomeTotal: fixedIncomeForPeriod,
         fixedExpensesTotal: fixedExpensesForPeriod,
         transactionIncomeTotal: transactionIncome,
-        transactionExpensesTotal: transactionExpenses
+        transactionExpensesTotal: transactionExpenses,
+        transactionDetails: {
+          income: incomeData,
+          expenses: expensesData
+        }
       });
 
     } catch (err) {
@@ -264,7 +332,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, [user, selectedPeriod, selectedYear]);
+  }, [user, selectedPeriod, selectedYear, selectedMonth]);
 
   return { data, loading, error, refetch: fetchAnalyticsData };
 };

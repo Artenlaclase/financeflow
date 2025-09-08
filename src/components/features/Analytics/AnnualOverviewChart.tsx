@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Typography, CircularProgress, Grid, Card, CardContent } from '@mui/material';
-import { useAnalytics } from '../../../hooks/useAnalyticsSimplified';
+import { useAnalytics } from '../../../hooks/useAnalytics';
 
 interface AnnualOverviewChartProps {
   selectedYear: number;

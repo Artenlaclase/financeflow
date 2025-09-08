@@ -16,6 +16,8 @@ import {
   Alert
 } from '@mui/material';
 import { Transaction, updateTransaction } from '../../../lib/firebaseUtils';
+import { Timestamp } from 'firebase/firestore';
+import { formatDateForInput, safeDate } from '../../../lib/dateUtils';
 import { useAuth } from '../../../contexts/AuthContext';
 
 interface EditTransactionDialogProps {
@@ -68,8 +70,7 @@ export default function EditTransactionDialog({
       // Formatear fecha para input date
       let dateValue = '';
       if (transaction.date) {
-        const d = transaction.date.toDate ? transaction.date.toDate() : new Date(transaction.date);
-        dateValue = d.toISOString().split('T')[0];
+        dateValue = formatDateForInput(transaction.date);
       }
       setDate(dateValue);
     }
@@ -93,11 +94,23 @@ export default function EditTransactionDialog({
     }
 
     try {
+      // Convertir YYYY-MM-DD a fecha local al mediodía para evitar desfases por zona horaria
+      let finalDate: Date | null = null;
+      if (date) {
+        const ymdMatch = /^\d{4}-\d{2}-\d{2}$/.test(date);
+        if (ymdMatch) {
+          const [y, m, d] = date.split('-').map((n) => parseInt(n, 10));
+          finalDate = new Date(y, m - 1, d, 12, 0, 0, 0);
+        } else {
+          finalDate = safeDate(date);
+        }
+      }
+
       await updateTransaction(user.uid, transaction.id, transaction.type, {
         amount: parseFloat(amount),
         category,
         description,
-        date: new Date(date)
+        date: finalDate ? Timestamp.fromDate(finalDate) : undefined
       });
 
       // Los listeners de Firestore actualizarán automáticamente los datos

@@ -10,6 +10,9 @@ export interface Transaction {
   description?: string;
   category?: string;
   date: any;
+  paymentMethod?: 'efectivo' | 'debito' | 'credito';
+  installments?: number;
+  merchant?: string;
 }
 
 export const updateTransaction = async (
@@ -19,12 +22,9 @@ export const updateTransaction = async (
   updateData: Partial<Transaction>
 ): Promise<void> => {
   try {
-    // Importante: 'income' collection name es 'income', 'expense' collection name es 'expenses'
-    const collectionName = type === 'income' ? 'income' : 'expenses';
-    console.log('Updating in collection:', collectionName, 'Document ID:', transactionId);
-    
-    const docRef = doc(db, 'users', userId, collectionName, transactionId);
-    
+    // Intentar primero en la colección global de transacciones
+    console.log('Attempting to update in global collection: transactions, ID:', transactionId);
+
     const dataToUpdate = {
       ...updateData,
       updatedAt: new Date()
@@ -33,9 +33,20 @@ export const updateTransaction = async (
     // Eliminar campos que no se deben actualizar
     delete dataToUpdate.id;
     delete dataToUpdate.type;
-    
-    await updateDoc(docRef, dataToUpdate);
-    console.log('Transaction updated successfully:', transactionId);
+
+    try {
+      const globalRef = doc(db, 'transactions', transactionId);
+      await updateDoc(globalRef, dataToUpdate);
+      console.log('Transaction updated successfully in global collection:', transactionId);
+      return;
+    } catch (globalErr) {
+      console.warn('Global update failed, attempting legacy path...', globalErr);
+      // Fallback a colecciones legacy por usuario
+      const collectionName = type === 'income' ? 'income' : 'expenses';
+      const legacyRef = doc(db, 'users', userId, collectionName, transactionId);
+      await updateDoc(legacyRef, dataToUpdate);
+      console.log('Transaction updated successfully in legacy collection:', collectionName, transactionId);
+    }
   } catch (error) {
     console.error('Error updating transaction:', error);
     throw new Error('Error al actualizar la transacción');
@@ -55,15 +66,22 @@ export const deleteTransaction = async (
   }
 
   try {
-    // Importante: 'income' collection name es 'income', 'expense' collection name es 'expenses' 
-    const collectionName = type === 'income' ? 'income' : 'expenses';
-    console.log('Deleting from collection:', collectionName, 'Document ID:', transactionId);
-    
-    const docRef = doc(db, 'users', userId, collectionName, transactionId);
-    console.log('Document reference created:', docRef.path);
-    
-    await deleteDoc(docRef);
-    console.log('Transaction deleted successfully:', transactionId);
+    // Intentar primero borrar en la colección global
+    try {
+      const globalRef = doc(db, 'transactions', transactionId);
+      await deleteDoc(globalRef);
+      console.log('Transaction deleted successfully from global collection:', transactionId);
+      return;
+    } catch (globalErr) {
+      console.warn('Global delete failed, attempting legacy path...', globalErr);
+      // Fallback a colecciones legacy por usuario
+      const collectionName = type === 'income' ? 'income' : 'expenses';
+      console.log('Deleting from legacy collection:', collectionName, 'Document ID:', transactionId);
+      const legacyRef = doc(db, 'users', userId, collectionName, transactionId);
+      console.log('Document reference created:', legacyRef.path);
+      await deleteDoc(legacyRef);
+      console.log('Transaction deleted successfully from legacy collection:', transactionId);
+    }
   } catch (error) {
     console.error('Firestore delete error:', error);
     

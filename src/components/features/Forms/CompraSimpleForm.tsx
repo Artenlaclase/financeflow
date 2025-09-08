@@ -24,9 +24,12 @@ interface CompraSimpleFormProps {
 export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSimpleFormProps) {
   const [descripcion, setDescripcion] = useState('');
   const [monto, setMonto] = useState('');
+  const [metodoPago, setMetodoPago] = useState('');
+  const [cuotas, setCuotas] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [localNombre, setLocalNombre] = useState('');
   const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,11 +39,25 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
     console.log('👤 Usuario:', user ? user.uid : 'No autenticado');
     console.log('📋 Datos:', { descripcion, monto });
     
-    if (!descripcion || !monto) {
+  if (!descripcion || !monto) {
       const errorMsg = 'Por favor completa todos los campos';
       console.log('❌ Validación fallida:', errorMsg);
       setError(errorMsg);
       return;
+    }
+
+    if (!metodoPago) {
+      const errorMsg = 'Selecciona un método de pago';
+      setError(errorMsg);
+      return;
+    }
+
+    if (metodoPago === 'credito') {
+      const n = parseInt(cuotas || '0', 10);
+      if (!n || n < 1) {
+        setError('Ingresa el número de cuotas (mínimo 1)');
+        return;
+      }
     }
 
     if (!user) {
@@ -62,9 +79,12 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
         category: 'Supermercado',
         amount: parseFloat(monto),
         description: descripcion,
+        ...(localNombre && { merchant: localNombre }),
         date: Timestamp.now(),
         userId: user.uid,
-        createdAt: Timestamp.now()
+        createdAt: Timestamp.now(),
+        paymentMethod: metodoPago,
+        ...(metodoPago === 'credito' && { installments: parseInt(cuotas, 10) })
       };
 
       console.log('🔥 Datos a enviar:', compraData);
@@ -79,6 +99,9 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
       // Limpiar formulario
       setDescripcion('');
       setMonto('');
+  setMetodoPago('');
+  setCuotas('');
+  setLocalNombre('');
       
       // Notificar al componente padre
       setTimeout(() => {
@@ -104,6 +127,9 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
       setSuccess('');
       setDescripcion('');
       setMonto('');
+  setMetodoPago('');
+  setCuotas('');
+  setLocalNombre('');
       onClose();
     }
   };
@@ -147,6 +173,35 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
               placeholder="Ej: 15000"
               required
             />
+
+            <TextField
+              label="Nombre del local/establecimiento (opcional)"
+              value={localNombre}
+              onChange={(e) => setLocalNombre(e.target.value)}
+              fullWidth
+              placeholder="Ej: Panadería Don Luis"
+            />
+
+            <TextField
+              label="Método de pago (efectivo, debito, credito)"
+              value={metodoPago}
+              onChange={(e) => setMetodoPago(e.target.value)}
+              fullWidth
+              placeholder="efectivo | debito | credito"
+              required
+            />
+
+            {metodoPago === 'credito' && (
+              <TextField
+                label="Número de cuotas"
+                type="number"
+                value={cuotas}
+                onChange={(e) => setCuotas(e.target.value)}
+                fullWidth
+                inputProps={{ min: 1, step: 1 }}
+                required
+              />
+            )}
           </Box>
         </DialogContent>
 

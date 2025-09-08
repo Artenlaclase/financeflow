@@ -21,7 +21,17 @@ export const safeDate = (dateValue: any): Date | null => {
       date = dateValue;
     }
     // Si es un string o número
-    else {
+    else if (typeof dateValue === 'string') {
+      // Manejar formato YYYY-MM-DD como fecha local (evita desfase por zona horaria)
+      const ymdMatch = /^\d{4}-\d{2}-\d{2}$/.test(dateValue);
+      if (ymdMatch) {
+        const [y, m, d] = dateValue.split('-').map(n => parseInt(n, 10));
+        // Usar mediodía para minimizar efectos de DST
+        date = new Date(y, (m - 1), d, 12, 0, 0, 0);
+      } else {
+        date = new Date(dateValue);
+      }
+    } else {
       date = new Date(dateValue);
     }
     

@@ -20,14 +20,16 @@ import {
 import { MoreVert, Edit, Delete } from '@mui/icons-material';
 import { useFinance } from '../../../contexts/FinanceContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useMonthlyReset } from '../../../hooks/useMonthlyReset';
 import { deleteTransaction, Transaction } from '../../../lib/firebaseUtils';
 import ConfirmationDialog from '../../shared/ConfirmationDialog';
 import EditTransactionDialog from './EditTransactionDialog';
-import { formatDateForDisplay } from '../../../lib/dateUtils';
+import { formatDateForDisplay, safeDate } from '../../../lib/dateUtils';
 
 export default function RecentTransactions() {
   const { recentTransactions } = useFinance();
   const { user } = useAuth();
+  const { currentMonth, currentYear } = useMonthlyReset();
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -39,11 +41,27 @@ export default function RecentTransactions() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Filtrar transacciones del mes actual
+  const currentMonthTransactions = recentTransactions.filter(transaction => {
+    if (!transaction?.date) return false;
+    const transactionDate = safeDate(transaction.date);
+    if (!transactionDate) return false;
+    const transactionMonth = transactionDate.getMonth();
+    const transactionYear = transactionDate.getFullYear();
+    return transactionMonth === currentMonth && transactionYear === currentYear;
+  }).sort((a, b) => {
+    const aDate = safeDate(a.date)?.getTime() ?? 0;
+    const bDate = safeDate(b.date)?.getTime() ?? 0;
+    return bDate - aDate; // más recientes primero
+  });
+
   // Debug log para ver las transacciones
   console.log('RecentTransactions - Current transactions:', recentTransactions);
+  console.log('RecentTransactions - Current month transactions:', currentMonthTransactions);
   console.log('RecentTransactions - User:', user);
   console.log('RecentTransactions - Transactions length:', recentTransactions?.length || 0);
-  console.log('RecentTransactions - Detailed transactions:', recentTransactions.map(t => ({
+  console.log('RecentTransactions - Current month length:', currentMonthTransactions?.length || 0);
+  console.log('RecentTransactions - Detailed transactions:', currentMonthTransactions.map(t => ({
     id: t.id,
     type: t.type,
     amount: t.amount,
@@ -72,14 +90,14 @@ export default function RecentTransactions() {
     );
   }
 
-  if (!recentTransactions || recentTransactions.length === 0) {
+  if (!currentMonthTransactions || currentMonthTransactions.length === 0) {
     return (
       <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
-          Transacciones Recientes
+          Transacciones del Mes Actual
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          No hay transacciones recientes
+          No hay transacciones en el mes actual
         </Typography>
       </Paper>
     );
@@ -255,7 +273,7 @@ export default function RecentTransactions() {
         gap: { xs: 1, sm: 0 }
       }}>
         <Typography variant="h6" sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-          Transacciones Recientes
+          Transacciones del Mes Actual
         </Typography>
         {process.env.NODE_ENV === 'development' && (
           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -275,7 +293,7 @@ export default function RecentTransactions() {
       {process.env.NODE_ENV === 'development' && (
         <Box sx={{ mb: 2, p: 1, bgcolor: 'grey.100', fontSize: '0.8rem' }}>
           <Typography variant="caption">
-            Debug: {recentTransactions.length} transacciones cargadas
+            Debug: {currentMonthTransactions.length} transacciones del mes actual
           </Typography>
           <br />
           <Typography variant="caption">
@@ -284,8 +302,10 @@ export default function RecentTransactions() {
         </Box>
       )}
       
-      <List sx={{ width: '100%' }}>
-        {recentTransactions.map((transaction: any, index: number) => {
+  {/* Contenedor scrollable que muestra aprox. 4 filas por defecto */}
+  <Box sx={{ width: '100%', maxHeight: 320, overflowY: 'auto', pr: 1 }}>
+  <List sx={{ width: '100%' }}>
+        {currentMonthTransactions.map((transaction: any, index: number) => {
           // Validar datos de la transacción antes de renderizar
           const isValidTransaction = transaction && transaction.id && transaction.type && typeof transaction.amount === 'number';
           
@@ -373,11 +393,12 @@ export default function RecentTransactions() {
                   }
                 />
               </ListItem>
-              {index < recentTransactions.length - 1 && <Divider />}
+              {index < currentMonthTransactions.length - 1 && <Divider />}
             </Box>
           );
         })}
       </List>
+  </Box>
 
       {/* Menu de acciones */}
       <Menu

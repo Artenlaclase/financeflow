@@ -73,6 +73,16 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
   const [canScrollUp, setCanScrollUp] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Normaliza texto: minúsculas, sin acentos/diacríticos y sin espacios extra
+  const normalizeText = (s: string | undefined | null) =>
+    (s || '')
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ');
+
   useEffect(() => {
     console.log('🔄 HistorialPrecios useEffect triggered - refreshTrigger:', refreshTrigger);
     if (!user) {
@@ -139,8 +149,15 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
   };
 
   const getProductosUnicos = () => {
-    const nombres = new Set(productos.map(p => p.nombre.toLowerCase().trim()));
-    return Array.from(nombres).sort();
+    // Deduplicar por nombre normalizado pero mostrar un nombre original representativo
+    const map = new Map<string, string>();
+    for (const p of productos) {
+      const norm = normalizeText(p.nombre);
+      if (!map.has(norm)) {
+        map.set(norm, p.nombre);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'es'));
   };
 
   const getSupermercadosUnicos = () => {
@@ -150,7 +167,7 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
 
   const productosFiltrados = productos.filter(producto => {
     const coincideProducto = !filtroProducto || 
-      producto.nombre.toLowerCase().includes(filtroProducto.toLowerCase());
+      normalizeText(producto.nombre).includes(normalizeText(filtroProducto));
     const coincideSupermercado = !filtroSupermercado || 
       producto.supermercado === filtroSupermercado;
     
@@ -183,7 +200,7 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
     if (productosFiltrados.length === 0) return null;
 
     const productosAgrupados = productosFiltrados.reduce((acc, producto) => {
-      const key = producto.nombre.toLowerCase().trim();
+      const key = normalizeText(producto.nombre);
       if (!acc[key]) {
         acc[key] = [];
       }
