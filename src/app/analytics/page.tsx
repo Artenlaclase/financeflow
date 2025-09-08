@@ -16,9 +16,10 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   
   // Usar el hook de analytics
-  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear);
+  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear, selectedMonth);
 
   const handleBackToDashboard = () => {
     router.push('/dashboard');
@@ -38,6 +39,11 @@ export default function AnalyticsPage() {
   for (let i = currentYear; i >= currentYear - 5; i--) {
     yearOptions.push(i);
   }
+
+  const monthOptions = [
+    'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+  ];
 
   return (
     <AuthGuard requireAuth={true} requireFinanceSetup={true}>
@@ -121,7 +127,7 @@ export default function AnalyticsPage() {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={selectedPeriod === 'custom' ? 3 : 6}>
                 <FormControl fullWidth>
                   <InputLabel>Año</InputLabel>
                   <Select
@@ -137,12 +143,30 @@ export default function AnalyticsPage() {
                   </Select>
                 </FormControl>
               </Grid>
+              {selectedPeriod === 'custom' && (
+                <Grid item xs={12} md={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Mes</InputLabel>
+                    <Select
+                      value={selectedMonth}
+                      label="Mes"
+                      onChange={(e) => setSelectedMonth(e.target.value as number)}
+                    >
+                      {monthOptions.map((name, idx) => (
+                        <MenuItem key={name} value={idx}>
+                          {name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
             </Grid>
           </CardContent>
         </Card>
 
         {/* Resumen estadístico */}
-        <AnalyticsSummary selectedPeriod={selectedPeriod} selectedYear={selectedYear} />
+  <AnalyticsSummary selectedPeriod={selectedPeriod} selectedYear={selectedYear} selectedMonth={selectedMonth} />
 
         {/* Gráficos principales */}
         <Grid container spacing={3}>
@@ -159,7 +183,7 @@ export default function AnalyticsPage() {
                     Gastos por Categoría
                   </Typography>
                 </Box>
-                <ExpensesByCategoryChart selectedPeriod={selectedPeriod} selectedYear={selectedYear} />
+                <ExpensesByCategoryChart selectedPeriod={selectedPeriod} selectedYear={selectedYear} selectedMonth={selectedMonth} />
               </CardContent>
             </Card>
           </Grid>
@@ -177,14 +201,14 @@ export default function AnalyticsPage() {
                     Tendencia Mensual
                   </Typography>
                 </Box>
-                <MonthlyTrendChart selectedPeriod={selectedPeriod} selectedYear={selectedYear} />
+                <MonthlyTrendChart selectedPeriod={selectedPeriod} selectedYear={selectedYear} selectedMonth={selectedMonth} />
               </CardContent>
             </Card>
           </Grid>
 
           {/* Tabla de transacciones */}
           <Grid item xs={12}>
-            <MonthlyTransactionsTable selectedPeriod={selectedPeriod} selectedYear={selectedYear} />
+            <MonthlyTransactionsTable selectedPeriod={selectedPeriod} selectedYear={selectedYear} selectedMonth={selectedMonth} />
           </Grid>
 
           {/* Resumen anual */}

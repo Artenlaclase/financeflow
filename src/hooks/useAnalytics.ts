@@ -28,7 +28,7 @@ export interface AnalyticsData {
   };
 }
 
-export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
+export const useAnalytics = (selectedPeriod: string, selectedYear: number, selectedMonth?: number) => {
   const { user } = useAuth();
   const { profile } = useFinanceProfile();
   const [data, setData] = useState<AnalyticsData>({
@@ -50,7 +50,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getDateRange = (period: string, year: number) => {
+  const getDateRange = (period: string, year: number, month?: number) => {
     const now = new Date();
     let startDate: Date;
     let endDate: Date;
@@ -75,6 +75,16 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       case 'thisYear':
         startDate = new Date(year, 0, 1);
         endDate = new Date(year, 11, 31);
+        break;
+      case 'custom':
+        // Si se especifica un mes, usar ese mes del año seleccionado; si no, todo el año
+        if (typeof month === 'number' && month >= 0 && month <= 11) {
+          startDate = new Date(year, month, 1);
+          endDate = new Date(year, month + 1, 0);
+        } else {
+          startDate = new Date(year, 0, 1);
+          endDate = new Date(year, 11, 31);
+        }
         break;
       default:
         startDate = new Date(year, 0, 1);
@@ -117,7 +127,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
     setError(null);
 
     try {
-      const { startDate, endDate } = getDateRange(selectedPeriod, selectedYear);
+  const { startDate, endDate } = getDateRange(selectedPeriod, selectedYear, selectedMonth);
       console.log('📊 Analytics date range:', { startDate, endDate });
 
       // Consultar transacciones de la colección global
@@ -137,10 +147,17 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
         const data = { id: doc.id, ...doc.data() } as any;
         const transactionDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
         
-        // Para períodos de año completo, no filtrar por fecha aquí
-        // Solo filtrar por año para incluir todos los meses
+        // Para año completo, incluir todo el año; para custom con mes, filtrar por mes y año
         if (selectedPeriod === 'thisYear' || selectedPeriod === 'custom') {
-          if (transactionDate.getFullYear() === selectedYear) {
+          if (typeof selectedMonth === 'number' && selectedPeriod === 'custom') {
+            if (transactionDate.getFullYear() === selectedYear && transactionDate.getMonth() === selectedMonth) {
+              if (data.type === 'income') {
+                incomeData.push(data);
+              } else if (data.type === 'expense' || data.type === 'compra') {
+                expensesData.push(data);
+              }
+            }
+          } else if (transactionDate.getFullYear() === selectedYear) {
             if (data.type === 'income') {
               incomeData.push(data);
             } else if (data.type === 'expense' || data.type === 'compra') {
@@ -223,8 +240,13 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
       // Determinar qué meses incluir según el período
       let monthsToInclude: number[] = [];
       if (selectedPeriod === 'thisYear' || selectedPeriod === 'custom') {
-        // Para año completo, incluir todos los meses del año seleccionado
-        monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
+        if (selectedPeriod === 'custom' && typeof selectedMonth === 'number') {
+          // Custom de un mes: solo ese mes
+          monthsToInclude = [selectedMonth];
+        } else {
+          // Año completo: incluir todos los meses
+          monthsToInclude = Array.from({ length: 12 }, (_, i) => i);
+        }
       } else {
         // Para otros períodos, calcular los meses relevantes dentro del año seleccionado
         const monthStart = startDate.getMonth();
@@ -310,7 +332,7 @@ export const useAnalytics = (selectedPeriod: string, selectedYear: number) => {
 
   useEffect(() => {
     fetchAnalyticsData();
-  }, [user, selectedPeriod, selectedYear]);
+  }, [user, selectedPeriod, selectedYear, selectedMonth]);
 
   return { data, loading, error, refetch: fetchAnalyticsData };
 };

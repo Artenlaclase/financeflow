@@ -6,10 +6,11 @@ import { useAnalytics } from '../../../hooks/useAnalytics';
 interface MonthlyTrendChartProps {
   selectedPeriod: string;
   selectedYear: number;
+  selectedMonth?: number;
 }
 
-export default function MonthlyTrendChart({ selectedPeriod, selectedYear }: MonthlyTrendChartProps) {
-  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear);
+export default function MonthlyTrendChart({ selectedPeriod, selectedYear, selectedMonth }: MonthlyTrendChartProps) {
+  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear, selectedMonth);
 
   if (loading) {
     return (

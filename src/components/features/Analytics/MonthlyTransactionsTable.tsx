@@ -27,7 +27,8 @@ import {
   MenuItem
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
-import { doc, updateDoc } from 'firebase/firestore';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
 import { useAnalytics } from '../../../hooks/useAnalytics';
 import { formatDateForDisplay } from '../../../lib/dateUtils';
@@ -35,15 +36,19 @@ import { formatDateForDisplay } from '../../../lib/dateUtils';
 interface MonthlyTransactionsTableProps {
   selectedPeriod: string;
   selectedYear: number;
+  selectedMonth?: number;
 }
 
-export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear }: MonthlyTransactionsTableProps) {
-  const { data, loading, error, refetch } = useAnalytics(selectedPeriod, selectedYear);
+export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear, selectedMonth }: MonthlyTransactionsTableProps) {
+  const { data, loading, error, refetch } = useAnalytics(selectedPeriod, selectedYear, selectedMonth);
   const [editing, setEditing] = useState<any | null>(null);
   const [merchant, setMerchant] = useState('');
   const [method, setMethod] = useState('');
   const [installments, setInstallments] = useState('');
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -172,8 +177,8 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
         </Typography>
       ) : (
         <>
-          <TableContainer>
-            <Table size="small">
+          <TableContainer sx={{ maxHeight: 520 }}>
+            <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell>Fecha</TableCell>
@@ -188,7 +193,7 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
             </TableHead>
             <TableBody>
               {allTransactions.map((transaction, index) => (
-                <TableRow key={`${transaction.type}-${index}`}>
+                <TableRow key={('id' in transaction && transaction.id) ? transaction.id : `${transaction.type}-${index}`}>
                   <TableCell>
                     {formatDateForDisplay(transaction.date)}
                   </TableCell>
@@ -233,9 +238,19 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
                   </TableCell>
                   <TableCell align="right">
                     {'id' in transaction && (
-                      <IconButton size="small" onClick={() => openEdit(transaction)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
+                      <>
+                        <IconButton size="small" onClick={() => openEdit(transaction)} aria-label="Editar">
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => setToDelete(transaction)} 
+                          aria-label="Eliminar"
+                          sx={{ color: 'error.main', ml: 0.5 }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
@@ -281,6 +296,53 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear 
               {saving ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogActions>
+          </Dialog>
+
+          {/* Confirmación de eliminación */}
+          <Dialog open={!!toDelete} onClose={() => { if (!deleting) { setToDelete(null); setDeleteError(null); } }}>
+            <DialogTitle>Eliminar transacción</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                ¿Seguro que deseas eliminar esta transacción? Esta acción no se puede deshacer.
+              </Typography>
+              {toDelete && (
+                <Box sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>
+                  <div><strong>Fecha:</strong> {formatDateForDisplay(toDelete.date)}</div>
+                  <div><strong>Descripción:</strong> {toDelete.description || toDelete.category || 'Sin descripción'}</div>
+                  <div><strong>Monto:</strong> {formatAmount(toDelete.amount)}</div>
+                </Box>
+              )}
+              {deleteError && (
+                <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => { if (!deleting) { setToDelete(null); setDeleteError(null); } }} disabled={deleting}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={async () => {
+                  if (!toDelete?.id) return;
+                  setDeleting(true);
+                  setDeleteError(null);
+                  try {
+                    await deleteDoc(doc(db, 'transactions', toDelete.id));
+                    await refetch();
+                    setToDelete(null);
+                  } catch (e: any) {
+                    console.error('Error deleting transaction:', e);
+                    setDeleteError(e?.message || 'Error al eliminar la transacción');
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                color="error"
+                variant="contained"
+                disabled={deleting}
+              >
+                {deleting ? 'Eliminando...' : 'Eliminar'}
+              </Button>
+            </DialogActions>
           </Dialog>
         </>
       )}

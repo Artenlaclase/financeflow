@@ -7,10 +7,11 @@ import { useAnalytics } from '../../../hooks/useAnalytics';
 interface AnalyticsSummaryProps {
   selectedPeriod: string;
   selectedYear: number;
+  selectedMonth?: number;
 }
 
-export default function AnalyticsSummary({ selectedPeriod, selectedYear }: AnalyticsSummaryProps) {
-  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear);
+export default function AnalyticsSummary({ selectedPeriod, selectedYear, selectedMonth }: AnalyticsSummaryProps) {
+  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear, selectedMonth);
 
   if (loading) {
     return (

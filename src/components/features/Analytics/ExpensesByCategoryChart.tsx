@@ -8,6 +8,7 @@ import { useAnalytics } from '../../../hooks/useAnalytics';
 interface ExpensesByCategoryChartProps {
   selectedPeriod: string;
   selectedYear: number;
+  selectedMonth?: number;
 }
 
 const COLORS = [
@@ -15,8 +16,8 @@ const COLORS = [
   '#82CA9D', '#FFC658', '#FF7C7C', '#8DD1E1', '#D084D0'
 ];
 
-export default function ExpensesByCategoryChart({ selectedPeriod, selectedYear }: ExpensesByCategoryChartProps) {
-  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear);
+export default function ExpensesByCategoryChart({ selectedPeriod, selectedYear, selectedMonth }: ExpensesByCategoryChartProps) {
+  const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear, selectedMonth);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [canScrollDown, setCanScrollDown] = useState(false);
