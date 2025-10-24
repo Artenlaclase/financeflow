@@ -31,5 +31,25 @@ export type ProviderTransaction = {
 
 export async function fetchTransactions(_accessToken: string, _fromISO: string, _toISO: string): Promise<ProviderTransaction[]> {
   // TODO: Fetch transactions from Fintoc API in the date range
-  return [];
+  // Sandbox/mock: generate a few transactions for demo if using test key
+  const isTest = (process.env.FINTOC_SECRET_KEY || '').startsWith('sk_test');
+  if (!isTest) return [];
+
+  const from = new Date(_fromISO);
+  const to = new Date(_toISO);
+  const days = Math.max(1, Math.min(20, Math.floor((to.getTime() - from.getTime()) / (24*60*60*1000))));
+
+  const out: ProviderTransaction[] = [];
+  for (let i = 0; i < Math.min(days, 8); i++) {
+    const d = new Date(to.getTime() - i * 24 * 60 * 60 * 1000);
+    out.push({
+      id: `mock-${d.toISOString().slice(0,10)}-${i}`,
+      date: d.toISOString(),
+      amount: i % 3 === 0 ? 250000 : -Math.round(1000 + Math.random() * 20000),
+      description: i % 3 === 0 ? 'Depósito Sueldo' : 'Compra Supermercado',
+      merchant: i % 3 === 0 ? 'Empleador S.A.' : 'Jumbo',
+      category: i % 3 === 0 ? 'income' : 'groceries'
+    });
+  }
+  return out;
 }
