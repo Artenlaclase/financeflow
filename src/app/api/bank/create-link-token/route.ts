@@ -1,20 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createLinkToken } from '@/lib/banking/fintoc';
-import { adminAuth } from '@/lib/firebase/admin';
+import { getUserIdFromRequest } from '@/lib/server/auth';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const authHeader = (req.headers as any).get?.('authorization') || '';
-    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!idToken) return NextResponse.json({ error: 'Missing Authorization Bearer token' }, { status: 401 });
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    const userId = decoded.uid;
+    await req.json().catch(() => ({})); // keep for parity; no required body
+    const userId = await getUserIdFromRequest(req);
 
     const { linkToken } = await createLinkToken(userId);
     return NextResponse.json({ linkToken });
   } catch (e: any) {
     console.error('create-link-token error', e);
-    return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
+    const status = e?.message === 'UNAUTHORIZED' ? 401 : 500;
+    return NextResponse.json({ error: e?.message || 'Server error' }, { status });
   }
 }

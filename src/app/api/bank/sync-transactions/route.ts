@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { fetchTransactions } from '@/lib/banking/fintoc';
 import { decrypt } from '@/lib/crypto';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
+import { getUserIdFromRequest } from '@/lib/server/auth';
 import { Timestamp } from 'firebase/firestore';
 
 function toLocalNoonTimestamp(dateISO: string): Timestamp {
@@ -12,15 +13,11 @@ function toLocalNoonTimestamp(dateISO: string): Timestamp {
 
 export async function POST(req: Request) {
   try {
-    const authHeader = (req.headers as any).get?.('authorization') || '';
-    const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    if (!idToken) return NextResponse.json({ error: 'Missing Authorization Bearer token' }, { status: 401 });
-    const decoded = await adminAuth.verifyIdToken(idToken);
-
     const body = await req.json();
     const { userId, fromISO, toISO, accountId: accountIdOverride } = body as { userId: string; fromISO: string; toISO: string; accountId?: string };
     if (!userId || !fromISO || !toISO) return NextResponse.json({ error: 'Missing userId/fromISO/toISO' }, { status: 400 });
-    if (decoded.uid !== userId) return NextResponse.json({ error: 'Token/user mismatch' }, { status: 403 });
+  const authUid = await getUserIdFromRequest(req).catch(() => null);
+  if (authUid !== userId) return NextResponse.json({ error: 'Token/user mismatch' }, { status: 403 });
 
   const connRef = adminDb.doc(`users/${userId}/bankConnections/fintoc`);
   const connSnap = await connRef.get();
@@ -39,7 +36,8 @@ export async function POST(req: Request) {
       const date = toLocalNoonTimestamp(tx.date);
       const idempotentId = `${'fintoc'}:${tx.id}`;
 
-      const ref = adminDb.collection('transactions').doc();
+      // Use deterministic document id to ensure idempotency across re-syncs
+      const ref = adminDb.collection('transactions').doc(idempotentId);
       batch.set(ref, {
         provider: 'fintoc',
         providerTxId: tx.id,
@@ -54,12 +52,21 @@ export async function POST(req: Request) {
         date,
         createdAt: new Date(),
         source: 'bank-sync',
-      });
+      }, { merge: true });
     }
     await batch.commit();
+
+    // Update connection metadata
+    const connRefMeta = adminDb.doc(`users/${userId}/bankConnections/fintoc`);
+    await connRefMeta.set({
+      lastSyncAt: new Date(),
+      lastSyncRange: { fromISO, toISO },
+    }, { merge: true });
+
     return NextResponse.json({ imported: providerTxs.length });
   } catch (e: any) {
     console.error('sync-transactions error', e);
-    return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
+    const status = e?.message === 'UNAUTHORIZED' ? 401 : 500;
+    return NextResponse.json({ error: e?.message || 'Server error' }, { status });
   }
 }
