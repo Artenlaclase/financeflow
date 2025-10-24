@@ -42,9 +42,10 @@ export default function BankPage() {
     try {
       const to = new Date();
       const from = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const token = await user.getIdToken();
       const res = await fetch('/api/bank/sync-transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ userId: user.uid, fromISO: from.toISOString(), toISO: to.toISOString() })
       });
       const data = await res.json();
