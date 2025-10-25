@@ -67,7 +67,8 @@ export async function POST(req: Request) {
     const keyType = key ? (key.startsWith('sk_test') ? 'test' : 'live') : 'unset';
     const payload: any = { imported: providerTxs.length };
     if (process.env.NODE_ENV !== 'production') {
-      payload.debug = { forceSandbox, keyType };
+      const idIsLink = typeof accessToken === 'string' && accessToken.startsWith('link_');
+      payload.debug = { forceSandbox, keyType, idIsLink, usedAccountId: accountId };
     }
     return NextResponse.json(payload);
   } catch (e: any) {

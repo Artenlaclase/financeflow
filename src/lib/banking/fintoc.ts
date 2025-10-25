@@ -34,11 +34,14 @@ export async function exchangePublicToken(publicToken: string): Promise<{ access
       const text = await resp.text();
       throw new Error(`Exchange failed: ${resp.status} ${text}`);
     }
-    const data = await resp.json().catch(() => ({} as any));
-    const accessToken = data.access_token || data.link_id || data.link || data.accessToken;
-    if (!accessToken) throw new Error('Exchange did not return access token');
-    const institutionId = data.institution_id || data.institutionId;
-    return { accessToken, institutionId };
+  const data = await resp.json().catch(() => ({} as any));
+  // Prefer link_id because listing endpoints typically use link identifiers
+  const linkId = data.link_id || data.link || null;
+  const access = data.access_token || data.accessToken || null;
+  const token = linkId || access;
+  if (!token) throw new Error('Exchange did not return link_id/access_token');
+  const institutionId = data.institution_id || data.institutionId;
+  return { accessToken: token, institutionId };
   } catch (err) {
     if (publicToken.startsWith('link_')) {
       return { accessToken: publicToken };
@@ -82,13 +85,16 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
 
   const base = getBaseUrl();
   const auth = getAuthHeader();
-  const linkId = accessTokenOrLinkId; // we store link_id or access token already; API expects link identifier
+  const linkId = accessTokenOrLinkId; // we store link_id when available, else access token; endpoints below expect link id
 
-  // Try movements endpoint first; if it fails, try transactions endpoint
-  const endpoints = [
-    `${base}/links/${encodeURIComponent(linkId)}/movements`,
-    `${base}/links/${encodeURIComponent(linkId)}/transactions`,
-  ];
+  // Build candidate endpoints (account-scoped first if provided), then link-scoped
+  const endpoints: string[] = [];
+  if (accountId) {
+    endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/accounts/${encodeURIComponent(accountId)}/movements`);
+    endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/accounts/${encodeURIComponent(accountId)}/transactions`);
+  }
+  endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/movements`);
+  endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/transactions`);
 
   const params = new URLSearchParams();
   params.set('since', fromISO.slice(0, 10));
