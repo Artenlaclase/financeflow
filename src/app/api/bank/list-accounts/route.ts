@@ -17,10 +17,12 @@ export async function GET(req: Request) {
     }
 
     const base = process.env.FINTOC_BASE_URL || 'https://api.fintoc.com/v1';
-    const sk = process.env.FINTOC_SECRET_KEY;
-    if (!sk) return NextResponse.json({ error: 'Missing FINTOC_SECRET_KEY' }, { status: 500 });
-
-    const headers = { Authorization: `Bearer ${sk}` } as Record<string, string>;
+    const urlObj = new URL(req.url);
+    const linkToken = urlObj.searchParams.get('linkToken') || '';
+    // Preferir linkToken; si no viene, intentaremos con SECRET pero muchos endpoints link-scoped requieren link_token.
+    const headers = linkToken
+      ? { Authorization: `Bearer ${linkToken}` }
+      : { Authorization: `Bearer ${process.env.FINTOC_SECRET_KEY || ''}` } as Record<string, string>;
     const tried: string[] = [];
 
     // Preflight del link para devolver un error claro si no es accesible
@@ -28,7 +30,8 @@ export async function GET(req: Request) {
     tried.push(`http:${preflight}`);
     const preResp = await fetch(preflight, { headers });
     if (!preResp.ok) {
-      return NextResponse.json({ error: `LINK_NOT_ACCESSIBLE (${preResp.status})`, tried }, { status: preResp.status });
+      const detail = await preResp.text().catch(() => '');
+      return NextResponse.json({ error: `LINK_NOT_ACCESSIBLE (${preResp.status}) ${detail || ''}. Si estás usando SECRET, intenta con linkToken.` , tried }, { status: preResp.status });
     }
 
     const families = [

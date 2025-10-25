@@ -7,10 +7,19 @@ function getBaseUrl() {
   return process.env.FINTOC_BASE_URL || 'https://api.fintoc.com/v1';
 }
 
-function getAuthHeader() {
+function getSecretAuthHeader() {
   const sk = process.env.FINTOC_SECRET_KEY;
   if (!sk) throw new Error('Missing FINTOC_SECRET_KEY');
   return `Bearer ${sk}`;
+}
+
+function isLinkToken(token: string) {
+  return /^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(token);
+}
+
+function extractLinkIdFromToken(linkToken: string): string | null {
+  const m = linkToken.match(/^(link_[A-Za-z0-9]+)_token_[A-Za-z0-9]+$/);
+  return m ? m[1] : null;
 }
 
 export async function createLinkToken(_userId: string): Promise<CreateLinkTokenResponse> {
@@ -40,7 +49,7 @@ export type ProviderTransaction = {
 
 export type FetchDebug = { method?: string; endpoint?: string; tried?: string[]; error?: string };
 
-export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: string, toISO: string, accountId?: string | null): Promise<{ txs: ProviderTransaction[]; debug?: FetchDebug }> {
+export async function fetchTransactions(linkTokenOrLegacy: string, fromISO: string, toISO: string, accountId?: string | null): Promise<{ txs: ProviderTransaction[]; debug?: FetchDebug }> {
   const forceSandbox = (process.env.FINTOC_FORCE_SANDBOX || '').toLowerCase() === 'true' || (process.env.FINTOC_FORCE_SANDBOX || '') === '1';
   const isTest = (process.env.FINTOC_SECRET_KEY || '').startsWith('sk_test');
 
@@ -65,20 +74,11 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
   }
 
   const base = getBaseUrl();
-  const auth = getAuthHeader();
-  const linkId = accessTokenOrLinkId; // we store link_id when available, else access token; endpoints below expect link id
+  const authLink = isLinkToken(linkTokenOrLegacy) ? `Bearer ${linkTokenOrLegacy}` : null;
+  const authSecret = getSecretAuthHeader();
+  const linkId = isLinkToken(linkTokenOrLegacy) ? (extractLinkIdFromToken(linkTokenOrLegacy) || '') : linkTokenOrLegacy;
 
-  // Quick existence check for the link to provide a clearer 404 cause early
-  try {
-    const linkUrl = `${base}/links/${encodeURIComponent(linkId)}`;
-    const resp = await fetch(linkUrl, { headers: { 'Authorization': auth } });
-    if (!resp.ok) {
-      // If the link itself is not found/accessible, return early with a specific error
-      return { txs: [], debug: { method: 'http', endpoint: linkUrl, tried: [`http:${linkUrl}`], error: `LINK_NOT_ACCESSIBLE (${resp.status})` } };
-    }
-  } catch (e: any) {
-    // Network/other error; continue to the normal flow which will report detailed tried endpoints
-  }
+  // Prefer link-scoped auth when available
 
   // Build candidate endpoints (account-scoped first if provided), then link-scoped.
   // We try multiple resource families because Fintoc can expose movements under accounts, bank_accounts, or credit_cards.
@@ -114,7 +114,7 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
     try {
       tried.push(`http:${url}`);
       const resp = await fetch(`${url}?${params.toString()}`, {
-        headers: { 'Authorization': auth },
+        headers: { 'Authorization': authLink || authSecret },
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
@@ -142,7 +142,7 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
     ];
     for (const le of listEndpoints) {
       tried.push(`http:${le}`);
-      const resp = await fetch(le, { headers: { 'Authorization': auth } });
+      const resp = await fetch(le, { headers: { 'Authorization': authLink || authSecret } });
       if (!resp.ok) continue;
       const list = await resp.json();
       const arr: any[] = Array.isArray(list) ? list : (list?.data || []);
@@ -157,7 +157,7 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
         for (const fu of familyCandidates) {
           try {
             tried.push(`http:${fu}`);
-            const r2 = await fetch(`${fu}?${params.toString()}`, { headers: { 'Authorization': auth } });
+            const r2 = await fetch(`${fu}?${params.toString()}`, { headers: { 'Authorization': authLink || authSecret } });
             if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
             const data = await r2.json();
             const items: any[] = Array.isArray(data) ? data : (data?.data || []);

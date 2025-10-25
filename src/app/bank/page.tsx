@@ -65,7 +65,7 @@ export default function BankPage() {
       const firstTried = triedArr[0]?.replace('http:', '') || '';
       const lastTried = triedArr[triedArr.length - 1]?.replace('http:', '') || '';
       const extra = data?.debug ? ` (sandbox:${data.debug.forceSandbox ? 'on' : 'off'}, key:${data.debug.keyType}` +
-        (data.debug.idIsLink !== undefined ? `, idIsLink:${data.debug.idIsLink ? 'true' : 'false'}` : '') +
+        (data.debug.hasLinkToken !== undefined ? `, linkToken:${data.debug.hasLinkToken ? 'yes' : 'no'}` : '') +
         (data.debug.usedAccountId ? `, account:${data.debug.usedAccountId}` : '') +
         (data.debug.providerDebug ? `, method:${data.debug.providerDebug.method || 'n/a'}` : '') +
         (data.debug.providerDebug?.endpoint ? `, endpoint:${data.debug.providerDebug.endpoint}` : '') +

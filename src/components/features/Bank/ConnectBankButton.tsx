@@ -89,14 +89,15 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
   <DialogTitle>Conectar con Fintoc</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            Live: pega tu <b>link_id</b> (link_...). Sandbox: puedes usar un public_token.
+            Live: pega tu <b>link_token</b> (formato: <code>link_..._token_...</code>) o un <b>exchange_token</b> para que lo intercambiemos.
+            Sandbox: puedes usar un <b>public_token</b>.
           </Alert>
           <TextField
             fullWidth
-            label="Token o Link ID"
+            label="Token (link_token / exchange_token / public_token)"
             value={publicToken}
             onChange={(e) => setPublicToken(e.target.value)}
-            placeholder="public-sandbox-... o link_..."
+            placeholder="link_xxx_token_yyyy o li_xxx_sec_yyyy o public-sandbox-..."
           />
           <TextField
             fullWidth
@@ -120,9 +121,8 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
             setLoading(true); setMsg(''); setErr('');
             try {
               const tokenField = publicToken.trim();
-              const matchLink = tokenField.match(/link_[A-Za-z0-9]+/);
-              const normalizedLink = matchLink ? matchLink[0] : tokenField;
-              const isLinkId = normalizedLink.startsWith('link_');
+              const isLinkToken = /^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(tokenField);
+              const isExchangeToken = /^li_[A-Za-z0-9]+_sec_[A-Za-z0-9]+$/.test(tokenField) || /exchange_token/i.test(tokenField);
               const accField = accountIdInput.trim();
               if (accField && !accField.startsWith('acc_')) {
                 throw new Error('El Account ID debe empezar con acc_');
@@ -133,7 +133,9 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ 
                   userId: user.uid, 
-                  ...(isLinkId ? { linkId: normalizedLink } : { publicToken: tokenField }),
+                  ...(isLinkToken ? { linkToken: tokenField } : {}),
+                  ...(isExchangeToken ? { exchangeToken: tokenField } : {}),
+                  ...(!isLinkToken && !isExchangeToken ? { publicToken: tokenField } : {}),
                   ...(accField && accField.length > 6 ? { accountId: accField } : {})
                 })
               });

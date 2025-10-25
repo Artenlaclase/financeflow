@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const connSnap = await connRef.get();
   if (!connSnap.exists) return NextResponse.json({ error: 'No connection' }, { status: 400 });
   const { accessTokenEnc, accountId: storedAccountId } = connSnap.data() as any;
-    const accessToken = decrypt(accessTokenEnc);
+    const accessToken = decrypt(accessTokenEnc); // ahora es link_token (link_..._token_...)
   const accountId = accountIdOverride || storedAccountId || null;
 
   const { txs: providerTxs, debug: providerDebug } = await fetchTransactions(accessToken, fromISO, toISO, accountId);
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       const type = amount >= 0 ? 'income' : 'expense';
       const amountAbs = Math.abs(amount);
   const date = toLocalNoonDate(tx.date);
-      const idempotentId = `${'fintoc'}:${tx.id}`;
+  const idempotentId = `${'fintoc'}:${tx.id}`;
 
       // Use deterministic document id to ensure idempotency across re-syncs
       const ref = adminDb.collection('transactions').doc(idempotentId);
@@ -67,8 +67,8 @@ export async function POST(req: Request) {
     const keyType = key ? (key.startsWith('sk_test') ? 'test' : 'live') : 'unset';
     const payload: any = { imported: providerTxs.length };
     if (process.env.NODE_ENV !== 'production') {
-      const idIsLink = typeof accessToken === 'string' && accessToken.startsWith('link_');
-      payload.debug = { forceSandbox, keyType, idIsLink, usedAccountId: accountId, providerDebug };
+  const hasLinkToken = typeof accessToken === 'string' && /_token_/.test(accessToken);
+  payload.debug = { forceSandbox, keyType, hasLinkToken, usedAccountId: accountId, providerDebug };
     }
     return NextResponse.json(payload);
   } catch (e: any) {

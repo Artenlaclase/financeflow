@@ -7,49 +7,58 @@ import { getUserIdFromRequest } from '@/lib/server/auth';
 export async function POST(req: Request) {
   try {
   const body = await req.json();
-  const { userId, publicToken, linkId, institutionId, accountId } = body as { userId: string; publicToken?: string; linkId?: string; institutionId?: string; accountId?: string };
+  const { userId, publicToken, linkId, linkToken, exchangeToken, institutionId, accountId } = body as { userId: string; publicToken?: string; linkId?: string; linkToken?: string; exchangeToken?: string; institutionId?: string; accountId?: string };
   if (!userId || (!publicToken && !linkId)) return NextResponse.json({ error: 'Missing userId and token/linkId' }, { status: 400 });
   const authUid = await getUserIdFromRequest(req).catch(() => null);
   if (authUid !== userId) return NextResponse.json({ error: 'Token/user mismatch' }, { status: 403 });
 
     let tokenToStore: string;
-    if (typeof linkId === 'string' && linkId.startsWith('link_')) {
-      // Aceptar directamente el link_id de Fintoc como credencial de acceso
-      // Normalizar: recortar espacios y extraer el patrón link_XXXX por si viene con texto adicional
-      const trimmed = linkId.trim();
-      const match = trimmed.match(/link_[A-Za-z0-9]+/);
-      tokenToStore = match ? match[0] : trimmed;
-    } else if (typeof publicToken === 'string') {
-      const { accessToken } = await exchangePublicToken(publicToken);
-      tokenToStore = accessToken;
-    } else {
-      return NextResponse.json({ error: 'Invalid token or linkId' }, { status: 400 });
-    }
-
-    // Preflight: validar que la SECRET actual puede acceder al link antes de guardar
-    try {
+    // 1) Direct link_token (preferido en live)
+    if (typeof linkToken === 'string' && /^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(linkToken.trim())) {
+      tokenToStore = linkToken.trim();
+    // 2) exchange_token -> llamar a /v1/links/exchange
+    } else if (typeof exchangeToken === 'string') {
       const base = process.env.FINTOC_BASE_URL || 'https://api.fintoc.com/v1';
       const sk = process.env.FINTOC_SECRET_KEY;
       if (!sk) throw new Error('Missing FINTOC_SECRET_KEY');
-      const resp = await fetch(`${base}/links/${encodeURIComponent(tokenToStore)}`, {
-        headers: { Authorization: `Bearer ${sk}` }
+      const params = new URLSearchParams({ exchange_token: exchangeToken.trim() });
+      const resp = await fetch(`${base}/links/exchange?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${sk}` },
       });
       if (!resp.ok) {
-        let detail = '';
-        try { detail = await resp.text(); } catch {}
-        return NextResponse.json({ error: `LINK_NOT_ACCESSIBLE (${resp.status}). Verifica proyecto/ambiente. linkId=${tokenToStore}${detail ? ` · ${detail}` : ''}` }, { status: 403 });
+        const detail = await resp.text().catch(() => '');
+        return NextResponse.json({ error: `EXCHANGE_FAILED (${resp.status}) ${detail}` }, { status: 400 });
       }
-    } catch (e: any) {
-      // Si falla por red, dejamos continuar; se detectará en sync
+      const linkData = await resp.json();
+      const lt = linkData?.link_token || linkData?.linkToken || linkData?.token;
+      if (!lt || !/^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(lt)) {
+        return NextResponse.json({ error: 'EXCHANGE_OK_BUT_NO_LINK_TOKEN' }, { status: 400 });
+      }
+      tokenToStore = lt;
+    // 3) Sandbox: public_token (flujo antiguo)
+    } else if (typeof publicToken === 'string') {
+      const { accessToken } = await exchangePublicToken(publicToken);
+      tokenToStore = accessToken;
+    // 4) No soportamos solo link_id en live
+    } else if (typeof linkId === 'string') {
+      return NextResponse.json({ error: 'Para live, entrega link_token (link_..._token_...) o exchange_token. El link_id solo no es suficiente.' }, { status: 400 });
+    } else {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
+    }
+
+    // Preflight: validar que la SECRET actual puede acceder al link antes de guardar
+    // Validación básica de formato de link_token
+    if (!/^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(tokenToStore)) {
+      return NextResponse.json({ error: 'TOKEN_INVALIDO. Se espera link_token (link_..._token_...)' }, { status: 400 });
     }
 
     const encrypted = encrypt(tokenToStore);
 
     const ref = adminDb.doc(`users/${userId}/bankConnections/fintoc`);
     await ref.set({
-      provider: 'fintoc',
-      institutionId: institutionId || null,
-      accessTokenEnc: encrypted,
+  provider: 'fintoc',
+  institutionId: institutionId || null,
+  accessTokenEnc: encrypted, // Guarda link_token cifrado
       accountId: accountId && accountId.startsWith('acc_') ? accountId : null,
       updatedAt: new Date(),
       createdAt: new Date(),
