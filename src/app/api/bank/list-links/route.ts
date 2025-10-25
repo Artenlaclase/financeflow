@@ -17,8 +17,16 @@ export async function GET(req: Request) {
     if (!resp.ok) return NextResponse.json({ error: `HTTP ${resp.status}` }, { status: resp.status });
     const data = await resp.json();
     const items: any[] = Array.isArray(data) ? data : (data?.data || []);
-    // Resumimos por seguridad
-    const links = items.map((l: any) => ({ id: l.id || l._id || l.uuid, institution: l.institution || l.institution_id || null }));
+    // Resumimos por seguridad y normalizamos institution a string
+    const links = items.map((l: any) => {
+      const rawInst = l?.institution ?? l?.institution_id ?? null;
+      let institutionName: string | null = null;
+      if (typeof rawInst === 'string') institutionName = rawInst;
+      else if (rawInst && typeof rawInst === 'object') {
+        institutionName = rawInst.name || rawInst.id || rawInst.code || null;
+      }
+      return { id: l.id || l._id || l.uuid, institutionName };
+    });
     return NextResponse.json({ links });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });

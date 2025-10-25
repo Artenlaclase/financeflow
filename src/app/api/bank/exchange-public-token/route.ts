@@ -15,7 +15,10 @@ export async function POST(req: Request) {
     let tokenToStore: string;
     if (typeof linkId === 'string' && linkId.startsWith('link_')) {
       // Aceptar directamente el link_id de Fintoc como credencial de acceso
-      tokenToStore = linkId;
+      // Normalizar: recortar espacios y extraer el patrón link_XXXX por si viene con texto adicional
+      const trimmed = linkId.trim();
+      const match = trimmed.match(/link_[A-Za-z0-9]+/);
+      tokenToStore = match ? match[0] : trimmed;
     } else if (typeof publicToken === 'string') {
       const { accessToken } = await exchangePublicToken(publicToken);
       tokenToStore = accessToken;
@@ -32,7 +35,9 @@ export async function POST(req: Request) {
         headers: { Authorization: `Bearer ${sk}` }
       });
       if (!resp.ok) {
-        return NextResponse.json({ error: `LINK_NOT_ACCESSIBLE (${resp.status}). Verifica que el link pertenece al mismo proyecto/ambiente que tu secret key.` }, { status: 403 });
+        let detail = '';
+        try { detail = await resp.text(); } catch {}
+        return NextResponse.json({ error: `LINK_NOT_ACCESSIBLE (${resp.status}). Verifica proyecto/ambiente. linkId=${tokenToStore}${detail ? ` · ${detail}` : ''}` }, { status: 403 });
       }
     } catch (e: any) {
       // Si falla por red, dejamos continuar; se detectará en sync

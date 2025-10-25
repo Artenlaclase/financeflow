@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Container, Card, CardContent, Typography, Box, Button, Alert, Stack } from '@mui/material';
+import { Container, Card, CardContent, Typography, Box, Button, Alert, Stack, TextField, Divider } from '@mui/material';
 import ConnectBankButton from '@/components/features/Bank/ConnectBankButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase/config';
@@ -16,6 +16,11 @@ export default function BankPage() {
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
+  // Dev debug state
+  const [linksDebug, setLinksDebug] = useState<any[] | null>(null);
+  const [accountsDebug, setAccountsDebug] = useState<any[] | null>(null);
+  const [debugLinkId, setDebugLinkId] = useState<string>('');
+  const [debugMsg, setDebugMsg] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -136,6 +141,67 @@ export default function BankPage() {
           </Stack>
         </CardContent>
       </Card>
+      {process.env.NODE_ENV !== 'production' && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Debug Fintoc (solo dev)</Typography>
+            <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+              <Button variant="outlined" onClick={async () => {
+                setDebugMsg(''); setLinksDebug(null); setAccountsDebug(null);
+                if (!user) return;
+                try {
+                  const token = await user.getIdToken();
+                  const res = await fetch('/api/bank/list-links', { headers: { 'Authorization': `Bearer ${token}` } });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data?.error || 'Error list-links');
+                  setLinksDebug(data.links || []);
+                } catch (e: any) {
+                  setDebugMsg(e?.message || 'Error');
+                }
+              }}>Listar Links</Button>
+            </Stack>
+            {linksDebug && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2">Links visibles por la SECRET actual:</Typography>
+                <ul>
+                  {linksDebug.map((l: any) => (
+                    <li key={l.id}><code>{l.id}</code>{l.institutionName ? ` · ${l.institutionName}` : ''}</li>
+                  ))}
+                </ul>
+              </Box>
+            )}
+            <Divider sx={{ my: 2 }} />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField fullWidth label="link_id para listar cuentas" value={debugLinkId} onChange={(e) => setDebugLinkId(e.target.value)} placeholder="link_..." />
+              <Button variant="outlined" onClick={async () => {
+                setAccountsDebug(null); setDebugMsg('');
+                if (!user || !debugLinkId) return;
+                try {
+                  const token = await user.getIdToken();
+                  const url = `/api/bank/list-accounts?linkId=${encodeURIComponent(debugLinkId)}`;
+                  const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data?.error || 'Error list-accounts');
+                  setAccountsDebug(data.accounts || []);
+                } catch (e: any) {
+                  setDebugMsg(e?.message || 'Error');
+                }
+              }}>Listar Cuentas</Button>
+            </Stack>
+            {accountsDebug && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2">Cuentas del link:</Typography>
+                <ul>
+                  {accountsDebug.map((a: any) => (
+                    <li key={a.id}><code>{a.id}</code> · {a.family}{a.name ? ` · ${a.name}` : ''}{a.last4 ? ` · ****${a.last4}` : ''}{a.currency ? ` · ${a.currency}` : ''}</li>
+                  ))}
+                </ul>
+              </Box>
+            )}
+            {debugMsg && <Alert severity="warning" sx={{ mt: 2 }}>{debugMsg}</Alert>}
+          </CardContent>
+        </Card>
+      )}
     </Container>
   );
 }

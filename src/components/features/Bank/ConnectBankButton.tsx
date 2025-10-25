@@ -119,8 +119,12 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
             if (!user) return;
             setLoading(true); setMsg(''); setErr('');
             try {
-              const isLinkId = publicToken.startsWith('link_');
-              if (accountIdInput && !accountIdInput.startsWith('acc_')) {
+              const tokenField = publicToken.trim();
+              const matchLink = tokenField.match(/link_[A-Za-z0-9]+/);
+              const normalizedLink = matchLink ? matchLink[0] : tokenField;
+              const isLinkId = normalizedLink.startsWith('link_');
+              const accField = accountIdInput.trim();
+              if (accField && !accField.startsWith('acc_')) {
                 throw new Error('El Account ID debe empezar con acc_');
               }
               const token = await user.getIdToken();
@@ -129,8 +133,8 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ 
                   userId: user.uid, 
-                  ...(isLinkId ? { linkId: publicToken } : { publicToken }),
-                  ...(accountIdInput ? { accountId: accountIdInput } : {})
+                  ...(isLinkId ? { linkId: normalizedLink } : { publicToken: tokenField }),
+                  ...(accField && accField.length > 6 ? { accountId: accField } : {})
                 })
               });
               const data = await res.json();
@@ -139,7 +143,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
               onConnected?.();
               setOpen(false);
             } catch (e: any) {
-              setErr(e?.message || 'Error');
+              setErr((e?.message || 'Error') + ' · Sugerencia: usa el panel "Listar Links" para copiar el link_id exacto.');
             } finally {
               setLoading(false);
             }
