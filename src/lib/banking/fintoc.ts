@@ -29,13 +29,19 @@ export async function createLinkToken(_userId: string): Promise<CreateLinkTokenR
 }
 
 export async function exchangePublicToken(publicToken: string): Promise<{ accessToken: string; institutionId?: string }> {
-  // Many Fintoc flows provide link_id directly via the widget. Prefer using that.
-  if (publicToken.startsWith('link_')) {
-    return { accessToken: publicToken };
+  const forceSandbox = (process.env.FINTOC_FORCE_SANDBOX || '').toLowerCase() === 'true' || (process.env.FINTOC_FORCE_SANDBOX || '') === '1';
+  const isTest = (process.env.FINTOC_SECRET_KEY || '').startsWith('sk_test');
+
+  // Aceptar public_token solo en sandbox/test
+  if (forceSandbox || isTest || publicToken.startsWith('public-sandbox-')) {
+    // Devolvemos un link_token sintético válido para nuestro flujo (no se llama a la API real en sandbox)
+    const suffix = Math.random().toString(36).slice(2, 10);
+    const synthetic = `link_sandbox_token_${suffix}`;
+    return { accessToken: synthetic };
   }
-  // If you truly need to exchange a public token, implement the correct endpoint for your Fintoc account setup.
-  // For now, guide the user to provide a link_id instead of attempting a non-existent exchange route.
-  throw new Error('Para cuentas live, pega el link_id (link_...) entregado por Fintoc Link. El intercambio de public_token no está habilitado.');
+
+  // En live no se admite public_token; usar link_token o exchange_token
+  throw new Error('public_token solo está permitido en sandbox. En live usa link_token (link_..._token_...) o exchange_token (li_..._sec_...).');
 }
 
 export type ProviderTransaction = {
@@ -52,9 +58,10 @@ export type FetchDebug = { method?: string; endpoint?: string; tried?: string[];
 export async function fetchTransactions(linkTokenOrLegacy: string, fromISO: string, toISO: string, accountId?: string | null): Promise<{ txs: ProviderTransaction[]; debug?: FetchDebug }> {
   const forceSandbox = (process.env.FINTOC_FORCE_SANDBOX || '').toLowerCase() === 'true' || (process.env.FINTOC_FORCE_SANDBOX || '') === '1';
   const isTest = (process.env.FINTOC_SECRET_KEY || '').startsWith('sk_test');
+  const isSyntheticSandbox = typeof linkTokenOrLegacy === 'string' && linkTokenOrLegacy.startsWith('link_sandbox_token_');
 
   // Optional mock path for local testing
-  if (forceSandbox || isTest) {
+  if (forceSandbox || isTest || isSyntheticSandbox) {
     const from = new Date(fromISO);
     const to = new Date(toISO);
     const days = Math.max(1, Math.min(20, Math.floor((to.getTime() - from.getTime()) / (24*60*60*1000))));

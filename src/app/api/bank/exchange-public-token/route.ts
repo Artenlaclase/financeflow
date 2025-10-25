@@ -7,8 +7,8 @@ import { getUserIdFromRequest } from '@/lib/server/auth';
 export async function POST(req: Request) {
   try {
   const body = await req.json();
-  const { userId, publicToken, linkId, linkToken, exchangeToken, institutionId, accountId } = body as { userId: string; publicToken?: string; linkId?: string; linkToken?: string; exchangeToken?: string; institutionId?: string; accountId?: string };
-  if (!userId || (!publicToken && !linkId)) return NextResponse.json({ error: 'Missing userId and token/linkId' }, { status: 400 });
+    const { userId, publicToken, linkId, linkToken, exchangeToken, institutionId, accountId } = body as { userId: string; publicToken?: string; linkId?: string; linkToken?: string; exchangeToken?: string; institutionId?: string; accountId?: string };
+    if (!userId || (!publicToken && !linkId && !linkToken && !exchangeToken)) return NextResponse.json({ error: 'Missing userId and token' }, { status: 400 });
   const authUid = await getUserIdFromRequest(req).catch(() => null);
   if (authUid !== userId) return NextResponse.json({ error: 'Token/user mismatch' }, { status: 403 });
 
@@ -37,11 +37,15 @@ export async function POST(req: Request) {
       tokenToStore = lt;
     // 3) Sandbox: public_token (flujo antiguo)
     } else if (typeof publicToken === 'string') {
-      const { accessToken } = await exchangePublicToken(publicToken);
-      tokenToStore = accessToken;
+      try {
+        const { accessToken } = await exchangePublicToken(publicToken);
+        tokenToStore = accessToken;
+      } catch (err: any) {
+        return NextResponse.json({ error: err?.message || 'INVALID_PUBLIC_TOKEN' }, { status: 400 });
+      }
     // 4) No soportamos solo link_id en live
     } else if (typeof linkId === 'string') {
-      return NextResponse.json({ error: 'Para live, entrega link_token (link_..._token_...) o exchange_token. El link_id solo no es suficiente.' }, { status: 400 });
+      return NextResponse.json({ error: 'En live usa link_token (link_..._token_...) o exchange_token (li_..._sec_...). El link_id solo no es suficiente.' }, { status: 400 });
     } else {
       return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
     }
@@ -49,7 +53,7 @@ export async function POST(req: Request) {
     // Preflight: validar que la SECRET actual puede acceder al link antes de guardar
     // Validación básica de formato de link_token
     if (!/^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(tokenToStore)) {
-      return NextResponse.json({ error: 'TOKEN_INVALIDO. Se espera link_token (link_..._token_...)' }, { status: 400 });
+        return NextResponse.json({ error: 'TOKEN_INVALIDO. Se espera link_token (link_..._token_...)' }, { status: 400 });
     }
 
     const encrypted = encrypt(tokenToStore);

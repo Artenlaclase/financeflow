@@ -35,6 +35,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
     const data = await res.json();
     if (!res.ok) {
       console.error('create-link-intent error', data);
+      setErr(String(data?.error || 'No se pudo crear Link Intent (400)'));
       setOpen(true); // fallback dialog
       return;
     }
