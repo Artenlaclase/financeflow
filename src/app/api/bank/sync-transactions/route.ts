@@ -3,12 +3,11 @@ import { fetchTransactions } from '@/lib/banking/fintoc';
 import { decrypt } from '@/lib/crypto';
 import { adminDb } from '@/lib/firebase/admin';
 import { getUserIdFromRequest } from '@/lib/server/auth';
-import { Timestamp } from 'firebase/firestore';
+// Do NOT import client Firestore Timestamp in server routes; use JS Date instead to avoid type mismatch.
 
-function toLocalNoonTimestamp(dateISO: string): Timestamp {
+function toLocalNoonDate(dateISO: string): Date {
   const d = new Date(dateISO);
-  const local = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
-  return Timestamp.fromDate(local);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
 }
 
 export async function POST(req: Request) {
@@ -26,14 +25,14 @@ export async function POST(req: Request) {
     const accessToken = decrypt(accessTokenEnc);
   const accountId = accountIdOverride || storedAccountId || null;
 
-  const providerTxs = await fetchTransactions(accessToken, fromISO, toISO);
+  const providerTxs = await fetchTransactions(accessToken, fromISO, toISO, accountId);
 
   const batch = adminDb.batch();
     for (const tx of providerTxs) {
       const amount = tx.amount;
       const type = amount >= 0 ? 'income' : 'expense';
       const amountAbs = Math.abs(amount);
-      const date = toLocalNoonTimestamp(tx.date);
+  const date = toLocalNoonDate(tx.date);
       const idempotentId = `${'fintoc'}:${tx.id}`;
 
       // Use deterministic document id to ensure idempotency across re-syncs
@@ -63,7 +62,14 @@ export async function POST(req: Request) {
       lastSyncRange: { fromISO, toISO },
     }, { merge: true });
 
-    return NextResponse.json({ imported: providerTxs.length });
+    const forceSandbox = ((process.env.FINTOC_FORCE_SANDBOX || '').toLowerCase() === 'true') || ((process.env.FINTOC_FORCE_SANDBOX || '') === '1');
+    const key = process.env.FINTOC_SECRET_KEY || '';
+    const keyType = key ? (key.startsWith('sk_test') ? 'test' : 'live') : 'unset';
+    const payload: any = { imported: providerTxs.length };
+    if (process.env.NODE_ENV !== 'production') {
+      payload.debug = { forceSandbox, keyType };
+    }
+    return NextResponse.json(payload);
   } catch (e: any) {
     console.error('sync-transactions error', e);
     const status = e?.message === 'UNAUTHORIZED' ? 401 : 500;

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from '@mui/material';
 
-export default function ConnectBankButton() {
+export default function ConnectBankButton({ onConnected }: { onConnected?: () => void }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [publicToken, setPublicToken] = useState('');
@@ -50,14 +50,17 @@ export default function ConnectBankButton() {
           linkToken,
           onSuccess: async (payload: { publicToken: string; institutionId?: string }) => {
             try {
+              const idToken = await user.getIdToken();
               const res = await fetch('/api/bank/exchange-public-token', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
                 body: JSON.stringify({ userId: user.uid, publicToken: payload.publicToken, institutionId: payload.institutionId })
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data?.error || 'Error en intercambio');
               setMsg('Conexión guardada. Ya puedes sincronizar transacciones.');
+              onConnected?.();
+              setOpen(false);
             } catch (e: any) {
               setErr(e?.message || 'Error');
             }
@@ -122,6 +125,8 @@ export default function ConnectBankButton() {
               const data = await res.json();
               if (!res.ok) throw new Error(data?.error || 'Error en intercambio');
               setMsg('Conexión guardada. Ya puedes sincronizar transacciones.');
+              onConnected?.();
+              setOpen(false);
             } catch (e: any) {
               setErr(e?.message || 'Error');
             } finally {

@@ -11,6 +11,8 @@ export default function BankPage() {
   const { user } = useAuth();
   const [connected, setConnected] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [institutionId, setInstitutionId] = useState<string>('');
+  const [accountId, setAccountId] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -26,9 +28,13 @@ export default function BankPage() {
         if (data?.updatedAt?.toDate) {
           setLastUpdated(data.updatedAt.toDate().toLocaleString());
         }
+        if (data?.institutionId) setInstitutionId(data.institutionId);
+        if (data?.accountId) setAccountId(data.accountId);
       } else {
         setConnected(false);
         setLastUpdated('');
+        setInstitutionId('');
+        setAccountId('');
       }
     };
     load();
@@ -48,9 +54,10 @@ export default function BankPage() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ userId: user.uid, fromISO: from.toISOString(), toISO: to.toISOString() })
       });
-      const data = await res.json();
+  const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Error de sincronización');
-      setResult(`Sincronización completa: ${data.imported} transacciones`);
+  const extra = data?.debug ? ` (sandbox:${data.debug.forceSandbox ? 'on' : 'off'}, key:${data.debug.keyType})` : '';
+  setResult(`Sincronización completa: ${data.imported} transacciones${extra}`);
     } catch (e: any) {
       setError(e?.message || 'Error desconocido');
     } finally {
@@ -67,16 +74,50 @@ export default function BankPage() {
             <Typography variant="h6">Fintoc (Chile)</Typography>
             <Typography variant="body2" color="text.secondary">
               Estado: {connected ? 'Conectado' : 'No conectado'}{lastUpdated ? ` (actualizado: ${lastUpdated})` : ''}
+              {connected && (
+                <>
+                  {institutionId ? ` · Institución: ${institutionId}` : ''}
+                  {accountId ? ` · Cuenta: ${accountId}` : ''}
+                </>
+              )}
             </Typography>
             {!connected && (
-              <ConnectBankButton />
+              <ConnectBankButton onConnected={() => {
+                setConnected(true);
+                setLastUpdated(new Date().toLocaleString());
+              }} />
             )}
             {connected && (
-              <Box>
+              <Stack direction="row" spacing={2}>
                 <Button variant="contained" onClick={sync90Days} disabled={syncing}>
                   {syncing ? 'Sincronizando…' : 'Sincronizar últimos 90 días'}
                 </Button>
-              </Box>
+                <ConnectBankButton onConnected={() => {
+                  setConnected(true);
+                  setLastUpdated(new Date().toLocaleString());
+                }} />
+                <Button color="error" onClick={async () => {
+                  if (!user) return;
+                  setError(''); setResult('');
+                  try {
+                    const token = await user.getIdToken();
+                    const res = await fetch('/api/bank/disconnect', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                      body: JSON.stringify({ provider: 'fintoc' })
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || 'Error al desconectar');
+                    setConnected(false);
+                    setLastUpdated('');
+                    setInstitutionId('');
+                    setAccountId('');
+                    setResult('Conexión eliminada');
+                  } catch (e: any) {
+                    setError(e?.message || 'Error desconocido');
+                  }
+                }}>Desconectar</Button>
+              </Stack>
             )}
             {result && <Alert severity="success">{result}</Alert>}
             {error && <Alert severity="error">{error}</Alert>}
