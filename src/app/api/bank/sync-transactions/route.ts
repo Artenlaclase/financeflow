@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const accessToken = decrypt(accessTokenEnc);
   const accountId = accountIdOverride || storedAccountId || null;
 
-  const providerTxs = await fetchTransactions(accessToken, fromISO, toISO, accountId);
+  const { txs: providerTxs, debug: providerDebug } = await fetchTransactions(accessToken, fromISO, toISO, accountId);
 
   const batch = adminDb.batch();
     for (const tx of providerTxs) {
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     const payload: any = { imported: providerTxs.length };
     if (process.env.NODE_ENV !== 'production') {
       const idIsLink = typeof accessToken === 'string' && accessToken.startsWith('link_');
-      payload.debug = { forceSandbox, keyType, idIsLink, usedAccountId: accountId };
+      payload.debug = { forceSandbox, keyType, idIsLink, usedAccountId: accountId, providerDebug };
     }
     return NextResponse.json(payload);
   } catch (e: any) {

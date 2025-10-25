@@ -59,7 +59,9 @@ export type ProviderTransaction = {
   category?: string;
 };
 
-export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: string, toISO: string, accountId?: string | null): Promise<ProviderTransaction[]> {
+export type FetchDebug = { method?: string; endpoint?: string; tried?: string[]; error?: string };
+
+export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: string, toISO: string, accountId?: string | null): Promise<{ txs: ProviderTransaction[]; debug?: FetchDebug }> {
   const forceSandbox = (process.env.FINTOC_FORCE_SANDBOX || '').toLowerCase() === 'true' || (process.env.FINTOC_FORCE_SANDBOX || '') === '1';
   const isTest = (process.env.FINTOC_SECRET_KEY || '').startsWith('sk_test');
 
@@ -80,7 +82,7 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
         category: i % 3 === 0 ? 'income' : 'groceries'
       });
     }
-    return out;
+    return { txs: out, debug: { method: 'mock' } };
   }
 
   const base = getBaseUrl();
@@ -100,28 +102,133 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
   params.set('since', fromISO.slice(0, 10));
   params.set('until', toISO.slice(0, 10));
   if (accountId) params.set('account_id', accountId);
+  const tried: string[] = [];
+  let lastError = '';
+
+  // Attempt via official SDK if available
+  try {
+    // Dynamically import to avoid bundling on client
+    const mod = await import('fintoc');
+    const FintocCtor: any = (mod as any).Fintoc || (mod as any).default;
+    if (FintocCtor) {
+      const client = new FintocCtor(process.env.FINTOC_SECRET_KEY);
+      const since = fromISO.slice(0, 10);
+      const until = toISO.slice(0, 10);
+      const link = await client.links.get(linkId);
+      const collect = async (gen: AsyncGenerator<any, any, any> | any): Promise<any[]> => {
+        const arr: any[] = [];
+        const iterator = await gen;
+        if (iterator && typeof iterator[Symbol.asyncIterator] === 'function') {
+          for await (const it of iterator as any) arr.push(it);
+        } else if (Array.isArray(iterator)) {
+          arr.push(...iterator);
+        }
+        return arr;
+      };
+      // Account-scoped first
+      if (accountId) {
+        try {
+          tried.push('sdk:accounts.movements');
+          const account = await link.accounts.get(accountId);
+          const gen = await account.movements.list({ since, until });
+          const items = await collect(gen);
+          if (items.length) {
+            return {
+              txs: items.map((mv: any) => ({
+                id: String(mv.id),
+                date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
+                amount: Number(mv.amount),
+                description: mv.description || mv.detail || mv.note,
+                merchant: mv.merchant?.name || mv.counterparty || null,
+                category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
+              })),
+              debug: { method: 'sdk', endpoint: 'accounts.movements', tried }
+            };
+          }
+        } catch (e: any) { lastError = String(e?.message || e); }
+        try {
+          tried.push('sdk:accounts.transactions');
+          const account = await link.accounts.get(accountId);
+          const gen = await account.transactions.list({ since, until });
+          const items = await collect(gen);
+          if (items.length) {
+            return {
+              txs: items.map((mv: any) => ({
+                id: String(mv.id),
+                date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
+                amount: Number(mv.amount),
+                description: mv.description || mv.detail || mv.note,
+                merchant: mv.merchant?.name || mv.counterparty || null,
+                category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
+              })),
+              debug: { method: 'sdk', endpoint: 'accounts.transactions', tried }
+            };
+          }
+        } catch (e: any) { lastError = String(e?.message || e); }
+      }
+      // Link-scoped
+      try {
+        tried.push('sdk:link.movements');
+        const gen = await link.movements.list({ since, until });
+        const items = await collect(gen);
+        if (items.length) {
+          return {
+            txs: items.map((mv: any) => ({
+              id: String(mv.id),
+              date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
+              amount: Number(mv.amount),
+              description: mv.description || mv.detail || mv.note,
+              merchant: mv.merchant?.name || mv.counterparty || null,
+              category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
+            })),
+            debug: { method: 'sdk', endpoint: 'link.movements', tried }
+          };
+        }
+      } catch (e: any) { lastError = String(e?.message || e); }
+      try {
+        tried.push('sdk:link.transactions');
+        const gen = await link.transactions.list({ since, until });
+        const items = await collect(gen);
+        if (items.length) {
+          return {
+            txs: items.map((mv: any) => ({
+              id: String(mv.id),
+              date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
+              amount: Number(mv.amount),
+              description: mv.description || mv.detail || mv.note,
+              merchant: mv.merchant?.name || mv.counterparty || null,
+              category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
+            })),
+            debug: { method: 'sdk', endpoint: 'link.transactions', tried }
+          };
+        }
+      } catch (e: any) { lastError = String(e?.message || e); }
+    }
+  } catch (e: any) { lastError = String(e?.message || e); }
 
   for (const url of endpoints) {
     try {
+      tried.push(`http:${url}`);
       const resp = await fetch(`${url}?${params.toString()}`, {
         headers: { 'Authorization': auth },
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       const items: any[] = Array.isArray(data) ? data : (data?.data || []);
-      return items.map((mv: any) => ({
+      return { txs: items.map((mv: any) => ({
         id: String(mv.id || mv._id || mv.uuid || mv.reference || mv.hash || mv.transaction_id),
         date: mv.date || mv.posted_at || mv.post_date || mv.booked_at || mv.created_at,
         amount: Number(mv.amount || mv.value || mv.money || 0),
         description: mv.description || mv.concept || mv.details || mv.note,
         merchant: mv.merchant?.name || mv.merchant || mv.counterparty || null,
-        category: mv.category || (mv.amount >= 0 ? 'income' : 'expense'),
-      })).filter(t => t.id && t.date && typeof t.amount === 'number');
-    } catch (e) {
+        category: mv.category || (Number(mv.amount || mv.value || mv.money || 0) >= 0 ? 'income' : 'expense'),
+      })).filter((t: any) => t.id && t.date && typeof t.amount === 'number'), debug: { method: 'http', endpoint: url, tried } };
+    } catch (e: any) {
+      lastError = String(e?.message || e);
       // try next endpoint
     }
   }
 
   // If everything fails
-  return [];
+  return { txs: [], debug: { tried, error: lastError } };
 }
