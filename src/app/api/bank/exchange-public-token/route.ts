@@ -23,6 +23,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid token or linkId' }, { status: 400 });
     }
 
+    // Preflight: validar que la SECRET actual puede acceder al link antes de guardar
+    try {
+      const base = process.env.FINTOC_BASE_URL || 'https://api.fintoc.com/v1';
+      const sk = process.env.FINTOC_SECRET_KEY;
+      if (!sk) throw new Error('Missing FINTOC_SECRET_KEY');
+      const resp = await fetch(`${base}/links/${encodeURIComponent(tokenToStore)}`, {
+        headers: { Authorization: `Bearer ${sk}` }
+      });
+      if (!resp.ok) {
+        return NextResponse.json({ error: `LINK_NOT_ACCESSIBLE (${resp.status}). Verifica que el link pertenece al mismo proyecto/ambiente que tu secret key.` }, { status: 403 });
+      }
+    } catch (e: any) {
+      // Si falla por red, dejamos continuar; se detectará en sync
+    }
+
     const encrypted = encrypt(tokenToStore);
 
     const ref = adminDb.doc(`users/${userId}/bankConnections/fintoc`);

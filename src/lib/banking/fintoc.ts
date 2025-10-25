@@ -20,34 +20,13 @@ export async function createLinkToken(_userId: string): Promise<CreateLinkTokenR
 }
 
 export async function exchangePublicToken(publicToken: string): Promise<{ accessToken: string; institutionId?: string }> {
-  // Try real exchange endpoint; if fails, fallback to treating the provided token as link_id when it already starts with 'link_'
-  try {
-    const resp = await fetch(`${getBaseUrl()}/exchanges/public-token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': getAuthHeader(),
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ public_token: publicToken }),
-    });
-    if (!resp.ok) {
-      const text = await resp.text();
-      throw new Error(`Exchange failed: ${resp.status} ${text}`);
-    }
-  const data = await resp.json().catch(() => ({} as any));
-  // Prefer link_id because listing endpoints typically use link identifiers
-  const linkId = data.link_id || data.link || null;
-  const access = data.access_token || data.accessToken || null;
-  const token = linkId || access;
-  if (!token) throw new Error('Exchange did not return link_id/access_token');
-  const institutionId = data.institution_id || data.institutionId;
-  return { accessToken: token, institutionId };
-  } catch (err) {
-    if (publicToken.startsWith('link_')) {
-      return { accessToken: publicToken };
-    }
-    throw err;
+  // Many Fintoc flows provide link_id directly via the widget. Prefer using that.
+  if (publicToken.startsWith('link_')) {
+    return { accessToken: publicToken };
   }
+  // If you truly need to exchange a public token, implement the correct endpoint for your Fintoc account setup.
+  // For now, guide the user to provide a link_id instead of attempting a non-existent exchange route.
+  throw new Error('Para cuentas live, pega el link_id (link_...) entregado por Fintoc Link. El intercambio de public_token no está habilitado.');
 }
 
 export type ProviderTransaction = {
@@ -89,122 +68,47 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
   const auth = getAuthHeader();
   const linkId = accessTokenOrLinkId; // we store link_id when available, else access token; endpoints below expect link id
 
-  // Build candidate endpoints (account-scoped first if provided), then link-scoped
+  // Quick existence check for the link to provide a clearer 404 cause early
+  try {
+    const linkUrl = `${base}/links/${encodeURIComponent(linkId)}`;
+    const resp = await fetch(linkUrl, { headers: { 'Authorization': auth } });
+    if (!resp.ok) {
+      // If the link itself is not found/accessible, return early with a specific error
+      return { txs: [], debug: { method: 'http', endpoint: linkUrl, tried: [`http:${linkUrl}`], error: `LINK_NOT_ACCESSIBLE (${resp.status})` } };
+    }
+  } catch (e: any) {
+    // Network/other error; continue to the normal flow which will report detailed tried endpoints
+  }
+
+  // Build candidate endpoints (account-scoped first if provided), then link-scoped.
+  // We try multiple resource families because Fintoc can expose movements under accounts, bank_accounts, or credit_cards.
   const endpoints: string[] = [];
   if (accountId) {
+    // Direct account endpoints
+    endpoints.push(`${base}/accounts/${encodeURIComponent(accountId)}/movements`);
+    endpoints.push(`${base}/accounts/${encodeURIComponent(accountId)}/transactions`);
+    // Link-scoped account endpoints (if supported)
     endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/accounts/${encodeURIComponent(accountId)}/movements`);
     endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/accounts/${encodeURIComponent(accountId)}/transactions`);
+    // bank_accounts family
+    endpoints.push(`${base}/bank_accounts/${encodeURIComponent(accountId)}/movements`);
+    endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/bank_accounts/${encodeURIComponent(accountId)}/movements`);
+    // credit_cards family
+    endpoints.push(`${base}/credit_cards/${encodeURIComponent(accountId)}/movements`);
+    endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/credit_cards/${encodeURIComponent(accountId)}/movements`);
   }
+  // Link-level movements as a broad fallback
   endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/movements`);
   endpoints.push(`${base}/links/${encodeURIComponent(linkId)}/transactions`);
 
   const params = new URLSearchParams();
   params.set('since', fromISO.slice(0, 10));
   params.set('until', toISO.slice(0, 10));
-  if (accountId) params.set('account_id', accountId);
+  // Do not pass account_id as query param universally; account-scoped endpoints encode the id in the path.
   const tried: string[] = [];
   let lastError = '';
 
-  // Attempt via official SDK if available
-  try {
-    // Dynamically import to avoid bundling on client
-    const mod = await import('fintoc');
-    const FintocCtor: any = (mod as any).Fintoc || (mod as any).default;
-    if (FintocCtor) {
-      const client = new FintocCtor(process.env.FINTOC_SECRET_KEY);
-      const since = fromISO.slice(0, 10);
-      const until = toISO.slice(0, 10);
-      const link = await client.links.get(linkId);
-      const collect = async (gen: AsyncGenerator<any, any, any> | any): Promise<any[]> => {
-        const arr: any[] = [];
-        const iterator = await gen;
-        if (iterator && typeof iterator[Symbol.asyncIterator] === 'function') {
-          for await (const it of iterator as any) arr.push(it);
-        } else if (Array.isArray(iterator)) {
-          arr.push(...iterator);
-        }
-        return arr;
-      };
-      // Account-scoped first
-      if (accountId) {
-        try {
-          tried.push('sdk:accounts.movements');
-          const account = await link.accounts.get(accountId);
-          const gen = await account.movements.list({ since, until });
-          const items = await collect(gen);
-          if (items.length) {
-            return {
-              txs: items.map((mv: any) => ({
-                id: String(mv.id),
-                date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
-                amount: Number(mv.amount),
-                description: mv.description || mv.detail || mv.note,
-                merchant: mv.merchant?.name || mv.counterparty || null,
-                category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
-              })),
-              debug: { method: 'sdk', endpoint: 'accounts.movements', tried }
-            };
-          }
-        } catch (e: any) { lastError = String(e?.message || e); }
-        try {
-          tried.push('sdk:accounts.transactions');
-          const account = await link.accounts.get(accountId);
-          const gen = await account.transactions.list({ since, until });
-          const items = await collect(gen);
-          if (items.length) {
-            return {
-              txs: items.map((mv: any) => ({
-                id: String(mv.id),
-                date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
-                amount: Number(mv.amount),
-                description: mv.description || mv.detail || mv.note,
-                merchant: mv.merchant?.name || mv.counterparty || null,
-                category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
-              })),
-              debug: { method: 'sdk', endpoint: 'accounts.transactions', tried }
-            };
-          }
-        } catch (e: any) { lastError = String(e?.message || e); }
-      }
-      // Link-scoped
-      try {
-        tried.push('sdk:link.movements');
-        const gen = await link.movements.list({ since, until });
-        const items = await collect(gen);
-        if (items.length) {
-          return {
-            txs: items.map((mv: any) => ({
-              id: String(mv.id),
-              date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
-              amount: Number(mv.amount),
-              description: mv.description || mv.detail || mv.note,
-              merchant: mv.merchant?.name || mv.counterparty || null,
-              category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
-            })),
-            debug: { method: 'sdk', endpoint: 'link.movements', tried }
-          };
-        }
-      } catch (e: any) { lastError = String(e?.message || e); }
-      try {
-        tried.push('sdk:link.transactions');
-        const gen = await link.transactions.list({ since, until });
-        const items = await collect(gen);
-        if (items.length) {
-          return {
-            txs: items.map((mv: any) => ({
-              id: String(mv.id),
-              date: mv.date || mv.posted_at || mv.booked_at || mv.created_at,
-              amount: Number(mv.amount),
-              description: mv.description || mv.detail || mv.note,
-              merchant: mv.merchant?.name || mv.counterparty || null,
-              category: mv.category || (Number(mv.amount) >= 0 ? 'income' : 'expense'),
-            })),
-            debug: { method: 'sdk', endpoint: 'link.transactions', tried }
-          };
-        }
-      } catch (e: any) { lastError = String(e?.message || e); }
-    }
-  } catch (e: any) { lastError = String(e?.message || e); }
+  // Skipping SDK usage to avoid bundler/type issues in Next.js; rely on HTTP endpoints only.
 
   for (const url of endpoints) {
     try {
@@ -229,6 +133,52 @@ export async function fetchTransactions(accessTokenOrLinkId: string, fromISO: st
     }
   }
 
-  // If everything fails
+  // Discovery fallback: list accounts under link and try their known families
+  try {
+    const listEndpoints = [
+      `${base}/links/${encodeURIComponent(linkId)}/accounts`,
+      `${base}/links/${encodeURIComponent(linkId)}/bank_accounts`,
+      `${base}/links/${encodeURIComponent(linkId)}/credit_cards`
+    ];
+    for (const le of listEndpoints) {
+      tried.push(`http:${le}`);
+      const resp = await fetch(le, { headers: { 'Authorization': auth } });
+      if (!resp.ok) continue;
+      const list = await resp.json();
+      const arr: any[] = Array.isArray(list) ? list : (list?.data || []);
+      for (const acc of arr) {
+        const id = acc?.id || acc?._id || acc?.uuid;
+        if (!id) continue;
+        const familyCandidates = [
+          `${base}/accounts/${encodeURIComponent(id)}/movements`,
+          `${base}/bank_accounts/${encodeURIComponent(id)}/movements`,
+          `${base}/credit_cards/${encodeURIComponent(id)}/movements`
+        ];
+        for (const fu of familyCandidates) {
+          try {
+            tried.push(`http:${fu}`);
+            const r2 = await fetch(`${fu}?${params.toString()}`, { headers: { 'Authorization': auth } });
+            if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
+            const data = await r2.json();
+            const items: any[] = Array.isArray(data) ? data : (data?.data || []);
+            return { txs: items.map((mv: any) => ({
+              id: String(mv.id || mv._id || mv.uuid || mv.reference || mv.hash || mv.transaction_id),
+              date: mv.date || mv.posted_at || mv.post_date || mv.booked_at || mv.created_at,
+              amount: Number(mv.amount || mv.value || mv.money || 0),
+              description: mv.description || mv.concept || mv.details || mv.note,
+              merchant: mv.merchant?.name || mv.merchant || mv.counterparty || null,
+              category: mv.category || (Number(mv.amount || mv.value || mv.money || 0) >= 0 ? 'income' : 'expense'),
+            })).filter((t: any) => t.id && t.date && typeof t.amount === 'number'), debug: { method: 'http', endpoint: fu, tried } };
+          } catch (e2: any) {
+            lastError = String(e2?.message || e2);
+          }
+        }
+      }
+    }
+  } catch (e3: any) {
+    lastError = String(e3?.message || e3);
+  }
+
+  // If everything still fails
   return { txs: [], debug: { tried, error: lastError } };
 }

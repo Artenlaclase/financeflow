@@ -8,6 +8,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [publicToken, setPublicToken] = useState('');
+  const [accountIdInput, setAccountIdInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string>('');
   const [err, setErr] = useState<string>('');
@@ -88,7 +89,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
   <DialogTitle>Conectar con Fintoc</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 2 }}>
-            Pega tu public_token o un link_id (por ejemplo: link_abc123). En sandbox, puedes usar “Generar token sandbox”.
+            Live: pega tu <b>link_id</b> (link_...). Sandbox: puedes usar un public_token.
           </Alert>
           <TextField
             fullWidth
@@ -96,6 +97,14 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
             value={publicToken}
             onChange={(e) => setPublicToken(e.target.value)}
             placeholder="public-sandbox-... o link_..."
+          />
+          <TextField
+            fullWidth
+            sx={{ mt: 2 }}
+            label="Account ID (opcional)"
+            value={accountIdInput}
+            onChange={(e) => setAccountIdInput(e.target.value)}
+            placeholder="acc_..."
           />
           {msg && <Alert severity="success" sx={{ mt: 2 }}>{msg}</Alert>}
           {err && <Alert severity="error" sx={{ mt: 2 }}>{err}</Alert>}
@@ -111,7 +120,9 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
             setLoading(true); setMsg(''); setErr('');
             try {
               const isLinkId = publicToken.startsWith('link_');
-              const isAccountId = publicToken.startsWith('acc_');
+              if (accountIdInput && !accountIdInput.startsWith('acc_')) {
+                throw new Error('El Account ID debe empezar con acc_');
+              }
               const token = await user.getIdToken();
               const res = await fetch('/api/bank/exchange-public-token', {
                 method: 'POST',
@@ -119,7 +130,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
                 body: JSON.stringify({ 
                   userId: user.uid, 
                   ...(isLinkId ? { linkId: publicToken } : { publicToken }),
-                  ...(isAccountId ? { accountId: publicToken } : {})
+                  ...(accountIdInput ? { accountId: accountIdInput } : {})
                 })
               });
               const data = await res.json();

@@ -54,10 +54,22 @@ export default function BankPage() {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ userId: user.uid, fromISO: from.toISOString(), toISO: to.toISOString() })
       });
-  const data = await res.json();
+      const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Error de sincronización');
-  const extra = data?.debug ? ` (sandbox:${data.debug.forceSandbox ? 'on' : 'off'}, key:${data.debug.keyType})` : '';
-  setResult(`Sincronización completa: ${data.imported} transacciones${extra}`);
+      const triedArr: string[] = data?.debug?.providerDebug?.tried || [];
+      const firstTried = triedArr[0]?.replace('http:', '') || '';
+      const lastTried = triedArr[triedArr.length - 1]?.replace('http:', '') || '';
+      const extra = data?.debug ? ` (sandbox:${data.debug.forceSandbox ? 'on' : 'off'}, key:${data.debug.keyType}` +
+        (data.debug.idIsLink !== undefined ? `, idIsLink:${data.debug.idIsLink ? 'true' : 'false'}` : '') +
+        (data.debug.usedAccountId ? `, account:${data.debug.usedAccountId}` : '') +
+        (data.debug.providerDebug ? `, method:${data.debug.providerDebug.method || 'n/a'}` : '') +
+        (data.debug.providerDebug?.endpoint ? `, endpoint:${data.debug.providerDebug.endpoint}` : '') +
+        (triedArr.length ? `, tried:${triedArr.length}` : '') +
+        (firstTried ? `, first:${firstTried}` : '') +
+        (lastTried && lastTried !== firstTried ? `, last:${lastTried}` : '') +
+        (data.debug.providerDebug?.error ? `, error:${data.debug.providerDebug.error}` : '') +
+        `)` : '';
+      setResult(`Sincronización completa: ${data.imported} transacciones${extra}`);
     } catch (e: any) {
       setError(e?.message || 'Error desconocido');
     } finally {
