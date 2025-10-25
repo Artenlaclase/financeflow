@@ -13,6 +13,7 @@ export default function BankPage() {
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [institutionId, setInstitutionId] = useState<string>('');
   const [accountId, setAccountId] = useState<string>('');
+  const [mode, setMode] = useState<'live' | 'sandbox' | ''>('');
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -35,11 +36,13 @@ export default function BankPage() {
         }
         if (data?.institutionId) setInstitutionId(data.institutionId);
         if (data?.accountId) setAccountId(data.accountId);
+        if (data?.mode === 'sandbox' || data?.mode === 'live') setMode(data.mode);
       } else {
         setConnected(false);
         setLastUpdated('');
         setInstitutionId('');
         setAccountId('');
+        setMode('');
       }
     };
     load();
@@ -64,7 +67,22 @@ export default function BankPage() {
       const triedArr: string[] = data?.debug?.providerDebug?.tried || [];
       const firstTried = triedArr[0]?.replace('http:', '') || '';
       const lastTried = triedArr[triedArr.length - 1]?.replace('http:', '') || '';
-      const extra = data?.debug ? ` (sandbox:${data.debug.forceSandbox ? 'on' : 'off'}, key:${data.debug.keyType}` +
+      const sandboxOn = (() => {
+        const sm = data?.debug?.sandboxMode;
+        if (sm) return !!(sm.env || sm.key || sm.synthetic || sm.modeStored === 'sandbox');
+        return !!data?.debug?.forceSandbox;
+      })();
+      const sandboxReasons = (() => {
+        const sm = data?.debug?.sandboxMode;
+        if (!sm) return '';
+        const reasons: string[] = [];
+        if (sm.env) reasons.push('env');
+        if (sm.key) reasons.push('key');
+        if (sm.synthetic) reasons.push('synthetic');
+        if (sm.modeStored === 'sandbox') reasons.push('mode');
+        return reasons.length ? ` [${reasons.join(',')}]` : '';
+      })();
+      const extra = data?.debug ? ` (sandbox:${sandboxOn ? 'on' : 'off'}${sandboxReasons}, key:${data.debug.keyType}` +
         (data.debug.hasLinkToken !== undefined ? `, linkToken:${data.debug.hasLinkToken ? 'yes' : 'no'}` : '') +
         (data.debug.usedAccountId ? `, account:${data.debug.usedAccountId}` : '') +
         (data.debug.providerDebug ? `, method:${data.debug.providerDebug.method || 'n/a'}` : '') +
@@ -95,6 +113,7 @@ export default function BankPage() {
                 <>
                   {institutionId ? ` · Institución: ${institutionId}` : ''}
                   {accountId ? ` · Cuenta: ${accountId}` : ''}
+                  {mode ? ` · Modo: ${mode.toUpperCase()}` : ''}
                 </>
               )}
             </Typography>

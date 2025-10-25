@@ -12,7 +12,8 @@ export async function POST(req: Request) {
   const authUid = await getUserIdFromRequest(req).catch(() => null);
   if (authUid !== userId) return NextResponse.json({ error: 'Token/user mismatch' }, { status: 403 });
 
-    let tokenToStore: string;
+  let tokenToStore: string;
+  let mode: 'live' | 'sandbox' = 'live';
     // 1) Direct link_token (preferido en live)
     if (typeof linkToken === 'string' && /^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(linkToken.trim())) {
       tokenToStore = linkToken.trim();
@@ -35,11 +36,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'EXCHANGE_OK_BUT_NO_LINK_TOKEN' }, { status: 400 });
       }
       tokenToStore = lt;
+      mode = (process.env.FINTOC_SECRET_KEY || '').startsWith('sk_test') ? 'sandbox' : 'live';
     // 3) Sandbox: public_token (flujo antiguo)
     } else if (typeof publicToken === 'string') {
       try {
         const { accessToken } = await exchangePublicToken(publicToken);
         tokenToStore = accessToken;
+        mode = 'sandbox';
       } catch (err: any) {
         return NextResponse.json({ error: err?.message || 'INVALID_PUBLIC_TOKEN' }, { status: 400 });
       }
@@ -64,6 +67,7 @@ export async function POST(req: Request) {
   institutionId: institutionId || null,
   accessTokenEnc: encrypted, // Guarda link_token cifrado
       accountId: accountId && accountId.startsWith('acc_') ? accountId : null,
+      mode,
       updatedAt: new Date(),
       createdAt: new Date(),
     }, { merge: true });

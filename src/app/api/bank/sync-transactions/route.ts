@@ -68,7 +68,23 @@ export async function POST(req: Request) {
     const payload: any = { imported: providerTxs.length };
     if (process.env.NODE_ENV !== 'production') {
   const hasLinkToken = typeof accessToken === 'string' && /_token_/.test(accessToken);
-  payload.debug = { forceSandbox, keyType, hasLinkToken, usedAccountId: accountId, providerDebug };
+  const syntheticToken = typeof accessToken === 'string' && accessToken.startsWith('link_sandbox_token_');
+  // Fetch stored mode for better diagnostics
+  const conn = (await connRefMeta.get()).data() as any | undefined;
+  const modeStored = (conn?.mode === 'sandbox' || conn?.mode === 'live') ? conn.mode : undefined;
+  payload.debug = {
+    forceSandbox,
+    keyType,
+    hasLinkToken,
+    usedAccountId: accountId,
+    sandboxMode: {
+      env: forceSandbox,
+      key: keyType === 'test',
+      synthetic: syntheticToken,
+      modeStored,
+    },
+    providerDebug
+  };
     }
     return NextResponse.json(payload);
   } catch (e: any) {
