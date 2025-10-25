@@ -25,37 +25,40 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
 
   const onClick = async () => {
     if (!user) return;
-    // 1) Create link token (server)
+    // 1) Crear Link Intent (server) para obtener widget_token
     const token = await user.getIdToken();
-    const res = await fetch('/api/bank/create-link-token', {
+    const res = await fetch('/api/bank/create-link-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ userId: user.uid })
+      body: JSON.stringify({})
     });
     const data = await res.json();
     if (!res.ok) {
-      console.error('create-link-token error', data);
+      console.error('create-link-intent error', data);
+      setOpen(true); // fallback dialog
       return;
     }
 
-    const { linkToken } = data;
+    const { widgetToken } = data;
     const pk = process.env.NEXT_PUBLIC_FINTOC_PUBLIC_KEY;
 
     try {
       // Intentar cargar el widget real de Fintoc si está disponible públicamente
       await loadScript('https://js.fintoc.com/v2/');
       const anyWin = window as any;
-      if (anyWin?.Fintoc && typeof anyWin.Fintoc.open === 'function' && pk) {
-        anyWin.Fintoc.open({
+      if (anyWin?.Fintoc && typeof anyWin.Fintoc.create === 'function' && pk && widgetToken) {
+        const widget = anyWin.Fintoc.create({
           publicKey: pk,
-          linkToken,
-          onSuccess: async (payload: { publicToken: string; institutionId?: string }) => {
+          widgetToken,
+          onSuccess: async (linkIntent: any) => {
             try {
               const idToken = await user.getIdToken();
+              const exchangeToken = linkIntent?.exchange_token || linkIntent?.exchangeToken || linkIntent?.exchange;
+              if (!exchangeToken) throw new Error('No se recibió exchange_token');
               const res = await fetch('/api/bank/exchange-public-token', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-                body: JSON.stringify({ userId: user.uid, publicToken: payload.publicToken, institutionId: payload.institutionId })
+                body: JSON.stringify({ userId: user.uid, exchangeToken })
               });
               const data = await res.json();
               if (!res.ok) throw new Error(data?.error || 'Error en intercambio');
@@ -70,6 +73,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
             // Usuario cerró el widget
           }
         });
+        widget.open?.();
         return; // Usamos el widget real, no abrimos el diálogo sandbox
       }
     } catch (e) {
@@ -145,7 +149,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
               onConnected?.();
               setOpen(false);
             } catch (e: any) {
-              setErr((e?.message || 'Error') + ' · Sugerencia: usa el panel "Listar Links" para copiar el link_id exacto.');
+              setErr((e?.message || 'Error') + ' · Sugerencia: usa un link_token (link_..._token_...) o un exchange_token (li_..._sec_...). El panel "Listar Links" muestra link_id, que no es suficiente en live.');
             } finally {
               setLoading(false);
             }
