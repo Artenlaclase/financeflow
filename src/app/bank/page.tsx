@@ -118,20 +118,32 @@ export default function BankPage() {
               )}
             </Typography>
             {!connected && (
-              <ConnectBankButton onConnected={() => {
-                setConnected(true);
-                setLastUpdated(new Date().toLocaleString());
-              }} />
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <ConnectBankButton label="Conectar banco (widget)" onConnected={() => {
+                  setConnected(true);
+                  setLastUpdated(new Date().toLocaleString());
+                }} />
+                <ConnectBankButton manualOnly label="Conectar (manual)" onConnected={() => {
+                  setConnected(true);
+                  setLastUpdated(new Date().toLocaleString());
+                }} />
+              </Stack>
             )}
             {connected && (
               <Stack direction="row" spacing={2}>
                 <Button variant="contained" onClick={sync90Days} disabled={syncing}>
                   {syncing ? 'Sincronizando…' : 'Sincronizar últimos 90 días'}
                 </Button>
-                <ConnectBankButton onConnected={() => {
+                <ConnectBankButton label="Actualizar conexión (widget)" onConnected={() => {
                   setConnected(true);
                   setLastUpdated(new Date().toLocaleString());
                 }} />
+                {mode === 'sandbox' && (
+                  <ConnectBankButton manualOnly label="Reconectar LIVE (manual)" onConnected={() => {
+                    setConnected(true);
+                    setLastUpdated(new Date().toLocaleString());
+                  }} />
+                )}
                 <Button color="error" onClick={async () => {
                   if (!user) return;
                   setError(''); setResult('');

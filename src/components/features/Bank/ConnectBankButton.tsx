@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert } from '@mui/material';
 
-export default function ConnectBankButton({ onConnected }: { onConnected?: () => void }) {
+export default function ConnectBankButton({ onConnected, manualOnly = false, label = 'Conectar banco (Fintoc)' }: { onConnected?: () => void; manualOnly?: boolean; label?: string }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [publicToken, setPublicToken] = useState('');
@@ -12,6 +12,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string>('');
   const [err, setErr] = useState<string>('');
+  const isLikelyLinkId = (val: string) => /^link_[A-Za-z0-9]+$/.test(val.trim());
 
   const loadScript = (src: string) => new Promise<void>((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) return resolve();
@@ -25,6 +26,11 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
 
   const onClick = async () => {
     if (!user) return;
+    // Si se fuerza modo manual, abrir directamente el diálogo
+    if (manualOnly) {
+      setOpen(true);
+      return;
+    }
     // 1) Crear Link Intent (server) para obtener widget_token
     const token = await user.getIdToken();
     const res = await fetch('/api/bank/create-link-intent', {
@@ -88,7 +94,7 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
   return (
     <>
       <Button variant="contained" color="primary" onClick={onClick}>
-        Conectar banco (Fintoc)
+        {label}
       </Button>
       <Dialog open={open} onClose={() => !loading && setOpen(false)}>
   <DialogTitle>Conectar con Fintoc</DialogTitle>
@@ -104,6 +110,12 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
             onChange={(e) => setPublicToken(e.target.value)}
             placeholder="link_xxx_token_yyyy o li_xxx_sec_yyyy o public-sandbox-..."
           />
+          {publicToken && isLikelyLinkId(publicToken) && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              Detecté un <b>link_id</b> (link_...). En live necesitas un <b>link_token</b> (link_..._token_...) o un <b>exchange_token</b> (li_..._sec_...).
+              Abre el panel de Fintoc, entra al link y genera un <i>Link Access Token</i>; pega ese valor aquí.
+            </Alert>
+          )}
           <TextField
             fullWidth
             sx={{ mt: 2 }}
@@ -128,6 +140,9 @@ export default function ConnectBankButton({ onConnected }: { onConnected?: () =>
               const tokenField = publicToken.trim();
               const isLinkToken = /^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(tokenField);
               const isExchangeToken = /^li_[A-Za-z0-9]+_sec_[A-Za-z0-9]+$/.test(tokenField) || /exchange_token/i.test(tokenField);
+              if (isLikelyLinkId(tokenField)) {
+                throw new Error('Ingresaste un link_id. Genera un link_token (link_..._token_...) desde el panel de Fintoc o usa un exchange_token (li_..._sec_...).');
+              }
               const accField = accountIdInput.trim();
               if (accField && !accField.startsWith('acc_')) {
                 throw new Error('El Account ID debe empezar con acc_');
