@@ -16,11 +16,13 @@ import {
   Alert,
   Typography,
   Paper,
+  Autocomplete,
 } from '@mui/material';
 import { ShoppingCart } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { useProductosHistorial } from '@/hooks/useProductosHistorial';
 
 interface ProductoCompra {
   nombre: string;
@@ -101,6 +103,7 @@ const metodosPago = [
 
 export default function ComprasMercadoForm({ open, onClose, onComplete }: ComprasMercadoFormProps) {
   const { user } = useAuth();
+  const { productos: productosHistorial } = useProductosHistorial();
   const [supermercado, setSupermercado] = useState('');
   const [supermercadoPersonalizado, setSupermercadoPersonalizado] = useState('');
   const [ubicacion, setUbicacion] = useState('');
@@ -119,6 +122,14 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const [unidadProducto, setUnidadProducto] = useState<'unidad' | 'peso' | 'litro'>('unidad');
   const [precioKiloProducto, setPrecioKiloProducto] = useState('');
   const [precioLitroProducto, setPrecioLitroProducto] = useState('');
+
+  // Manejar selección desde autocomplete
+  const handleSelectProducto = (productoSeleccionado: any) => {
+    if (productoSeleccionado) {
+      setNombreProducto(productoSeleccionado.nombre || '');
+      setMarcaProducto(productoSeleccionado.marca || '');
+    }
+  };
 
   const agregarProducto = () => {
     if (!nombreProducto || !cantidadProducto) {
@@ -499,11 +510,40 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
               Agregar Producto
             </Typography>
             <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-              <TextField
-                label="Nombre del producto"
-                value={nombreProducto}
-                onChange={(e) => setNombreProducto(e.target.value)}
-                fullWidth
+              <Autocomplete
+                freeSolo
+                options={productosHistorial}
+                getOptionLabel={(option) => 
+                  typeof option === 'string' 
+                    ? option 
+                    : option.nombre
+                }
+                value={
+                  nombreProducto 
+                    ? productosHistorial.find(p => p.nombre === nombreProducto) || nombreProducto
+                    : null
+                }
+                onChange={(event, value) => {
+                  if (typeof value === 'string') {
+                    handleSelectProducto({ nombre: value });
+                  } else if (value) {
+                    handleSelectProducto(value);
+                  } else {
+                    setNombreProducto('');
+                    setMarcaProducto('');
+                  }
+                }}
+                inputValue={nombreProducto}
+                onInputChange={(event, value) => {
+                  setNombreProducto(value);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Nombre del producto"
+                    placeholder="Buscar o ingresa un producto"
+                  />
+                )}
               />
               <TextField
                 label="Marca (opcional)"
