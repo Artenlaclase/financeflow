@@ -70,8 +70,7 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
       const q = query(
         collection(db, 'transactions'),
         where('userId', '==', user.uid),
-        where('type', '==', 'expense'),
-        where('merchant', '!=', null)
+        where('type', '==', 'expense')
       );
       
       const querySnapshot = await getDocs(q);
@@ -79,13 +78,15 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.merchant && typeof data.merchant === 'string') {
-          merchantSet.add(data.merchant);
+        // Filtrar solo los que tengan merchant con contenido
+        if (data.merchant && typeof data.merchant === 'string' && data.merchant.trim().length > 0) {
+          merchantSet.add(data.merchant.trim());
         }
       });
       
       // Convertir a array y ordenar alfabéticamente
       const merchantArray = Array.from(merchantSet).sort();
+      console.log('💼 Merchants cargados:', merchantArray);
       setMerchants(merchantArray);
     } catch (err) {
       console.error('Error al cargar merchants:', err);

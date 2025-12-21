@@ -50,8 +50,7 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
     try {
       const q = query(
         collection(db, 'transactions'),
-        where('userId', '==', user.uid),
-        where('merchant', '!=', null)
+        where('userId', '==', user.uid)
       );
       
       const querySnapshot = await getDocs(q);
@@ -59,13 +58,15 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.merchant && typeof data.merchant === 'string') {
-          localesSet.add(data.merchant);
+        // Filtrar solo los que tengan merchant con contenido
+        if (data.merchant && typeof data.merchant === 'string' && data.merchant.trim().length > 0) {
+          localesSet.add(data.merchant.trim());
         }
       });
       
       // Convertir a array y ordenar alfabéticamente
       const localesArray = Array.from(localesSet).sort();
+      console.log('📍 Locales cargados:', localesArray);
       setLocales(localesArray);
     } catch (err) {
       console.error('Error al cargar locales:', err);
