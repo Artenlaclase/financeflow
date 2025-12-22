@@ -122,12 +122,17 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const [unidadProducto, setUnidadProducto] = useState<'unidad' | 'peso' | 'litro'>('unidad');
   const [precioKiloProducto, setPrecioKiloProducto] = useState('');
   const [precioLitroProducto, setPrecioLitroProducto] = useState('');
+  const [marcasDisponibles, setMarcasDisponibles] = useState<string[]>([]); // Marcas del producto seleccionado
 
   // Manejar selección desde autocomplete
   const handleSelectProducto = (productoSeleccionado: any) => {
     if (productoSeleccionado) {
       setNombreProducto(productoSeleccionado.nombre || '');
-      setMarcaProducto(productoSeleccionado.marca || '');
+      // Obtener todas las marcas disponibles para este producto
+      const marcas = productoSeleccionado.marcas || [];
+      setMarcasDisponibles(marcas);
+      // Limpiar marca si cambio de producto
+      setMarcaProducto('');
     }
   };
 
@@ -206,6 +211,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
     // Limpiar campos
     setNombreProducto('');
     setMarcaProducto('');
+    setMarcasDisponibles([]);
     setPrecioProducto('');
     setCantidadProducto('');
     setUnidadProducto('unidad');
@@ -374,6 +380,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   setProductos([]);
       setNombreProducto('');
       setMarcaProducto('');
+      setMarcasDisponibles([]);
       setPrecioProducto('');
       setCantidadProducto('');
       setUnidadProducto('unidad');
@@ -545,11 +552,25 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                   />
                 )}
               />
-              <TextField
-                label="Marca (opcional)"
+              <Autocomplete
+                freeSolo
+                options={marcasDisponibles}
                 value={marcaProducto}
-                onChange={(e) => setMarcaProducto(e.target.value)}
-                fullWidth
+                onChange={(event, value) => {
+                  setMarcaProducto(value || '');
+                }}
+                inputValue={marcaProducto}
+                onInputChange={(event, value) => {
+                  setMarcaProducto(value);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Marca (opcional)"
+                    placeholder={marcasDisponibles.length > 0 ? "Selecciona o ingresa una marca" : "Ingresa marca"}
+                  />
+                )}
+                disabled={!nombreProducto}
               />
               
               <FormControl fullWidth>
