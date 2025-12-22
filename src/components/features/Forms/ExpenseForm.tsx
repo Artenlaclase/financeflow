@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,9 +13,10 @@ import {
   Select,
   MenuItem,
   Box,
-  Alert
+  Alert,
+  Autocomplete
 } from '@mui/material';
-import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { addDoc, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../lib/firebase/config';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useFinance } from '../../../contexts/FinanceContext';
@@ -45,11 +46,54 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [installments, setInstallments] = useState('');
   const [merchant, setMerchant] = useState('');
+  const [merchants, setMerchants] = useState<string[]>([]);
+  const [loadingMerchants, setLoadingMerchants] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const { user } = useAuth();
   const { refreshData } = useFinance();
+
+  // Cargar merchants cuando el diálogo se abre y el usuario está autenticado
+  useEffect(() => {
+    if (open && user) {
+      loadMerchants();
+    }
+  }, [open, user]);
+
+  // Función para cargar merchants únicos de gastos del usuario
+  const loadMerchants = async () => {
+    if (!user) return;
+    
+    setLoadingMerchants(true);
+    try {
+      const q = query(
+        collection(db, 'transactions'),
+        where('userId', '==', user.uid),
+        where('type', '==', 'expense')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const merchantSet = new Set<string>();
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Filtrar solo los que tengan merchant con contenido
+        if (data.merchant && typeof data.merchant === 'string' && data.merchant.trim().length > 0) {
+          merchantSet.add(data.merchant.trim());
+        }
+      });
+      
+      // Convertir a array y ordenar alfabéticamente
+      const merchantArray = Array.from(merchantSet).sort();
+      console.log('💼 Merchants cargados:', merchantArray);
+      setMerchants(merchantArray);
+    } catch (err) {
+      console.error('Error al cargar merchants:', err);
+    } finally {
+      setLoadingMerchants(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,9 +169,9 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
     setCategory('');
     setDescription('');
     setDate(new Date().toISOString().split('T')[0]);
-  setPaymentMethod('');
-  setInstallments('');
-  setMerchant('');
+    setPaymentMethod('');
+    setInstallments('');
+    setMerchant('');
     setError('');
     onClose();
   };
@@ -175,12 +219,27 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
             rows={2}
           />
 
-          <TextField
-            label="Nombre del local/establecimiento (opcional)"
+          <Autocomplete
+            freeSolo
+            options={merchants}
             value={merchant}
-            onChange={(e) => setMerchant(e.target.value)}
-            fullWidth
-            margin="normal"
+            onChange={(event, newValue) => {
+              setMerchant(newValue || '');
+            }}
+            onInputChange={(event, newInputValue) => {
+              setMerchant(newInputValue);
+            }}
+            loading={loadingMerchants}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Nombre del local/establecimiento (opcional)"
+                margin="normal"
+                helperText={merchants.length > 0 ? 'Selecciona uno existente o escribe uno nuevo' : 'No hay locales previos'}
+              />
+            )}
+            noOptionsText="Sin opciones"
+            loadingText="Cargando locales..."
           />
 
           <FormControl fullWidth margin="normal" required>

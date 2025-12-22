@@ -123,5 +123,16 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+
+    // Usuarios
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && userId == request.auth.uid;
+
+      match /bankConnections/{connId} {
+        allow read, create: if isAuthenticated() && userId == request.auth.uid;
+        // Evitar lectura del accessToken en texto plano (guardamos cifrado en accessTokenEnc)
+        allow update, delete: if isAuthenticated() && userId == request.auth.uid;
+      }
+    }
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogTitle, 
@@ -9,11 +9,12 @@ import {
   TextField, 
   Button, 
   Alert,
-  Box 
+  Box,
+  Autocomplete
 } from '@mui/material';
 import { useAuth } from '../../../contexts/AuthContext';
 import { db } from '../../../lib/firebase/config';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 
 interface CompraSimpleFormProps {
   open: boolean;
@@ -30,7 +31,49 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [localNombre, setLocalNombre] = useState('');
+  const [locales, setLocales] = useState<string[]>([]);
+  const [loadingLocales, setLoadingLocales] = useState(false);
   const { user } = useAuth();
+
+  // Cargar locales cuando el diálogo se abre y el usuario está autenticado
+  useEffect(() => {
+    if (open && user) {
+      loadLocales();
+    }
+  }, [open, user]);
+
+  // Función para cargar locales únicos del usuario
+  const loadLocales = async () => {
+    if (!user) return;
+    
+    setLoadingLocales(true);
+    try {
+      const q = query(
+        collection(db, 'transactions'),
+        where('userId', '==', user.uid)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const localesSet = new Set<string>();
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Filtrar solo los que tengan merchant con contenido
+        if (data.merchant && typeof data.merchant === 'string' && data.merchant.trim().length > 0) {
+          localesSet.add(data.merchant.trim());
+        }
+      });
+      
+      // Convertir a array y ordenar alfabéticamente
+      const localesArray = Array.from(localesSet).sort();
+      console.log('📍 Locales cargados:', localesArray);
+      setLocales(localesArray);
+    } catch (err) {
+      console.error('Error al cargar locales:', err);
+    } finally {
+      setLoadingLocales(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,12 +217,27 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
               required
             />
 
-            <TextField
-              label="Nombre del local/establecimiento (opcional)"
+            <Autocomplete
+              freeSolo
+              options={locales}
               value={localNombre}
-              onChange={(e) => setLocalNombre(e.target.value)}
-              fullWidth
-              placeholder="Ej: Panadería Don Luis"
+              onChange={(event, newValue) => {
+                setLocalNombre(newValue || '');
+              }}
+              onInputChange={(event, newInputValue) => {
+                setLocalNombre(newInputValue);
+              }}
+              loading={loadingLocales}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Nombre del local/establecimiento (opcional)"
+                  placeholder="Ej: Panadería Don Luis"
+                  helperText={locales.length > 0 ? 'Selecciona uno existente o escribe uno nuevo' : 'No hay locales previos'}
+                />
+              )}
+              noOptionsText="Sin opciones"
+              loadingText="Cargando locales..."
             />
 
             <TextField
