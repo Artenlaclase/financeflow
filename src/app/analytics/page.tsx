@@ -3,13 +3,14 @@
 import { Container, Grid, Typography, Box, Button, Card, CardContent, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowBack, TrendingUp, PieChart, BarChart } from '@mui/icons-material';
+import { ArrowBack, TrendingUp, PieChart, BarChart, TrendingDown } from '@mui/icons-material';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import ExpensesByCategoryChart from '../../components/features/Analytics/ExpensesByCategoryChart';
 import MonthlyTrendChart from '../../components/features/Analytics/MonthlyTrendChart';
 import AnnualOverviewChart from '../../components/features/Analytics/AnnualOverviewChart';
 import AnalyticsSummary from '../../components/features/Analytics/AnalyticsSummary';
 import MonthlyTransactionsTable from '../../components/features/Analytics/MonthlyTransactionsTable';
+import YearComparisonDialog from '../../components/features/Analytics/YearComparisonDialog';
 import { useAnalytics } from '../../hooks/useAnalytics';
 
 export default function AnalyticsPage() {
@@ -17,6 +18,7 @@ export default function AnalyticsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('thisMonth');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [openYearComparison, setOpenYearComparison] = useState(false);
   
   // Usar el hook de analytics
   const { data, loading, error } = useAnalytics(selectedPeriod, selectedYear, selectedMonth);
@@ -78,6 +80,25 @@ export default function AnalyticsPage() {
               Análisis Financiero
             </Typography>
           </Box>
+          
+          {/* Botón de Panorámica del Año Anterior */}
+          <Button 
+            variant="contained" 
+            startIcon={<TrendingDown />}
+            onClick={() => setOpenYearComparison(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              fontWeight: 'bold',
+              alignSelf: { xs: 'flex-start', md: 'center' },
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                boxShadow: '0 8px 16px rgba(102, 126, 234, 0.4)'
+              }
+            }}
+          >
+            📊 Panorámica {new Date().getFullYear() - 1}
+          </Button>
         </Box>
 
         {/* Debug info */}
@@ -230,6 +251,13 @@ export default function AnalyticsPage() {
           </Grid>
         </Grid>
       </Container>
+
+      {/* Diálogo de Comparación de Años */}
+      <YearComparisonDialog 
+        open={openYearComparison}
+        currentYear={selectedYear}
+        onClose={() => setOpenYearComparison(false)}
+      />
     </AuthGuard>
   );
 }
