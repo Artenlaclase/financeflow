@@ -252,6 +252,7 @@ export default function ExpenseForm({ open, onClose }: ExpenseFormProps) {
               <MenuItem value="efectivo">Efectivo</MenuItem>
               <MenuItem value="debito">Débito</MenuItem>
               <MenuItem value="credito">Crédito</MenuItem>
+              <MenuItem value="transferencia">Transferencia</MenuItem>
             </Select>
           </FormControl>
 

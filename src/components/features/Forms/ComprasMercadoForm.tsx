@@ -98,7 +98,8 @@ const ubicaciones = [
 const metodosPago = [
   { value: 'efectivo', label: 'Efectivo 💵' },
   { value: 'debito', label: 'Débito 💳' },
-  { value: 'credito', label: 'Crédito 💳' }
+  { value: 'credito', label: 'Crédito 💳' },
+  { value: 'transferencia', label: 'Transferencia 🏦' }
 ];
 
 export default function ComprasMercadoForm({ open, onClose, onComplete }: ComprasMercadoFormProps) {

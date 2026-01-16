@@ -241,11 +241,11 @@ export default function CompraSimpleForm({ open, onClose, onComplete }: CompraSi
             />
 
             <TextField
-              label="Método de pago (efectivo, debito, credito)"
+              label="Método de pago (efectivo, debito, credito, transferencia)"
               value={metodoPago}
               onChange={(e) => setMetodoPago(e.target.value)}
               fullWidth
-              placeholder="efectivo | debito | credito"
+              placeholder="efectivo | debito | credito | transferencia"
               required
             />
 
