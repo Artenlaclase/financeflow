@@ -143,7 +143,8 @@ export default function HistorialPrecios({ refreshTrigger }: HistorialPreciosPro
     const metodos = {
       efectivo: { label: 'Efectivo', icon: '💵', color: 'success' },
       debito: { label: 'Débito', icon: '💳', color: 'primary' },
-      credito: { label: 'Crédito', icon: '💳', color: 'warning' }
+      credito: { label: 'Crédito', icon: '💳', color: 'warning' },
+      transferencia: { label: 'Transferencia', icon: '🏦', color: 'info' }
     };
     return metodos[metodoPago as keyof typeof metodos] || { label: metodoPago || 'N/E', icon: '❓', color: 'default' };
   };

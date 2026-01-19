@@ -216,6 +216,7 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear,
                       }
                       if (method === 'debito') return 'Débito';
                       if (method === 'efectivo') return 'Efectivo';
+                      if (method === 'transferencia') return 'Transferencia';
                       // fallback para otros valores
                       return String(method);
                     })()}
@@ -276,6 +277,7 @@ export default function MonthlyTransactionsTable({ selectedPeriod, selectedYear,
                   <MenuItem value="efectivo">Efectivo</MenuItem>
                   <MenuItem value="debito">Débito</MenuItem>
                   <MenuItem value="credito">Crédito</MenuItem>
+                  <MenuItem value="transferencia">Transferencia</MenuItem>
                 </Select>
               </FormControl>
               {method === 'credito' && (

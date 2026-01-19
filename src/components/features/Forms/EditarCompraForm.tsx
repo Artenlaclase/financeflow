@@ -58,7 +58,8 @@ export default function EditarCompraForm({ open, compra, onClose, onSave }: Edit
   const metodosPago = [
     { value: 'efectivo', label: 'Efectivo 💵' },
     { value: 'debito', label: 'Débito 💳' },
-    { value: 'credito', label: 'Crédito 💳' }
+    { value: 'credito', label: 'Crédito 💳' },
+    { value: 'transferencia', label: 'Transferencia 🏦' }
   ];
 
   // Llenar formulario cuando se abra con datos de la compra
