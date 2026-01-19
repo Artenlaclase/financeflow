@@ -44,49 +44,41 @@ src/hooks/useSWRWithStore.ts
 
 ---
 
-### 2. **Lazy Loading** (`src/components/lazy/AnalyticsLazy.ts`)
+### 2. **Lazy Loading** (`src/components/lazy/AnalyticsLazy.tsx`)
 
 Componentes lazy-loaded que reducen el bundle inicial.
 
 ```typescript
-import { LazyAnalyticsPage, LazyMonthlyTrendChart } from '@/components/lazy/AnalyticsLazy';
+import { createLazyComponent } from '@/components/lazy/AnalyticsLazy';
 
-// Se carga bajo demanda cuando renderiza
-<LazyAnalyticsPage />
+// Crear un componente lazy:
+const LazyAnalyticsPage = createLazyComponent(
+  () => import('@/app/analytics/page'),
+  <AnalyticsPageSkeleton />,
+  { ssr: false }
+);
 
-// Con skeleton mientras carga
+// Usar con Suspense:
 <Suspense fallback={<AnalyticsPageSkeleton />}>
-  <LazyMonthlyTrendChart />
+  <LazyAnalyticsPage />
 </Suspense>
 ```
 
-**Componentes Lazy-Loaded:**
+**Componentes Disponibles (Template):**
 
 ```
-Analytics:
-  - LazyAnalyticsPage              // Página completa
-  - LazyAnalyticsSummary           // Resumen
-  - LazyMonthlyTrendChart          // Gráfico de tendencias
-  - LazyExpensesByCategoryChart    // Gráfico de categorías
-  - LazyYearComparisonDialog       // Modal de comparación
-  - LazyMonthlyTransactionsTable   // Tabla de transacciones
+Utilities:
+  - createLazyComponent<P>()       // Helper para crear lazy components
+  - withLazySuspense<P>()          // Wrapper con Suspense automático
 
-Bank:
-  - LazyBankPage                   // Página de conexión
-  - LazyConnectBankButton          // Botón de conexión
-
-Compras:
-  - LazyComprasPage                // Página de compras
-
-Utilidades:
-  - withLazySuspense<P>()          // Wrapper con Suspense
+Implementa siguiendo el template incluido en el archivo
 ```
 
 **Archivos Creados:**
 ```
-src/components/lazy/AnalyticsLazy.ts
-- dynamic() imports con fallback skeletons
-- Lazy loading para 8+ componentes
+src/components/lazy/AnalyticsLazy.tsx
+- createLazyComponent<P>()      // Factory para lazy-loaded components
+- withLazySuspense<P>()         // Wrapper con Suspense
 ```
 
 ---
