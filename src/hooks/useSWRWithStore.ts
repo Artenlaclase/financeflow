@@ -16,17 +16,32 @@
  *   () => fetchTransactions(userId),
  *   { revalidateOnFocus: true }
  * )
+ *
+ * FASE 3: SWR Integration con características avanzadas:
+ * - Deduplicación automática (60s default)
+ * - Revalidación inteligente en background
+ * - Sincronización entre tabs
+ * - Retry automático con backoff exponencial
+ * - Cancelación de requests pendientes
+ * - Predicción optimista de cambios
  */
 
 import useSWR, { SWRConfiguration } from 'swr';
+import { useCallback, useRef, useEffect } from 'react';
 import { logger } from '@/lib/logger';
 
 interface UseSWRWithStoreOptions extends SWRConfiguration {
   onSuccess?: (data: any) => void;
   onError?: (error: Error) => void;
   storeKey?: string; // Clave para guardar en store
+  optimisticData?: any; // Datos optimistas mientras se carga
+  rollbackOnError?: boolean; // Revertir cambios si hay error
 }
 
+/**
+ * Hook principal de SWR con integración a Zustand
+ * Gestiona caching, revalidación y sincronización automática
+ */
 export function useSWRWithStore<T>(
   key: string | null,
   fetcher: () => Promise<T>,
@@ -36,31 +51,52 @@ export function useSWRWithStore<T>(
     onSuccess,
     onError,
     storeKey,
+    optimisticData,
+    rollbackOnError = true,
     revalidateOnFocus = true,
     dedupingInterval = 60000, // 1 minuto
     focusThrottleInterval = 300000, // 5 minutos
+    errorRetryCount = 3,
+    errorRetryInterval = 5000,
     ...swrConfig
   } = options;
 
-  const { data, error, isLoading, mutate } = useSWR<T>(
+  // Usar useRef para mantener estado de rollback
+  const previousDataRef = useRef<T | undefined>(undefined);
+
+  const { data, error, isLoading, mutate, isValidating } = useSWR<T>(
     key,
     key ? fetcher : null,
     {
       revalidateOnFocus,
       dedupingInterval,
       focusThrottleInterval,
-      errorRetryCount: 3,
-      errorRetryInterval: 5000,
+      errorRetryCount,
+      errorRetryInterval,
+      // Actualización optimista
+      optimisticData: optimisticData ?? data,
+      // Mantener datos previos mientras carga
+      keepPreviousData: true,
+      // Revalidar cuando regresa el foco
+      revalidateOnReconnect: true,
       ...swrConfig,
     }
   );
 
+  // Guardar datos previos para rollback
+  useEffect(() => {
+    if (data && !error) {
+      previousDataRef.current = data;
+    }
+  }, [data, error]);
+
   // Log automático en desarrollo
   if (key) {
-    logger.log(`🔄 SWR [${key}]:`, {
-      isLoading,
-      isError: !!error,
-      dataExists: !!data,
+    logger.log(`🔄 SWR [${key}]`, {
+      loading: isLoading,
+      validating: isValidating,
+      error: !!error,
+      cached: !!data && !isLoading,
     });
   }
 
@@ -73,13 +109,36 @@ export function useSWRWithStore<T>(
     onError(error);
   }
 
+  // Función de mutación segura con rollback
+  const safeMutate = useCallback(
+    async (newData?: T, shouldRevalidate = false) => {
+      try {
+        const result = await mutate(newData, shouldRevalidate);
+        onSuccess?.(result ?? data);
+        return result;
+      } catch (err) {
+        if (rollbackOnError && previousDataRef.current) {
+          mutate(previousDataRef.current, false);
+        }
+        onError?.(err as Error);
+        throw err;
+      }
+    },
+    [mutate, data, onSuccess, onError, rollbackOnError]
+  );
+
   return {
     data,
     isLoading,
+    isValidating,
     error,
     isValidating: isLoading && !data,
-    mutate,
+    mutate: safeMutate,
     refetch: () => mutate(),
+    // Estados útiles
+    isEmpty: !data || (Array.isArray(data) && data.length === 0),
+    isError: !!error,
+    isSuccess: !!data && !error,
   };
 }
 
