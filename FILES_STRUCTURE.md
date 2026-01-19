@@ -44,6 +44,56 @@ src/constants/analytics.ts
 └── SWR_CONFIG
 ```
 
+### Stores (NEW - Phase 2)
+
+#### Auth Store
+```
+src/store/authStore.ts
+├── useAuthStore             [Zustand store]
+├── selectUser              [Selector]
+├── selectIsAuthenticated   [Selector]
+├── selectAuthLoading       [Selector]
+├── selectAuthError         [Selector]
+└── selectAuthStatus        [Selector compuesto]
+```
+
+#### Finance Store
+```
+src/store/financeStore.ts
+├── useFinanceStore                [Zustand store]
+├── selectBalance                  [Selector]
+├── selectIncome                   [Selector]
+├── selectExpenses                 [Selector]
+├── selectTransactions             [Selector]
+├── selectRecentTransactions       [Selector]
+├── selectFinanceSummary           [Selector compuesto]
+├── selectExpensesByCategory       [Selector derivado]
+└── selectTransactionsByMonth()    [Selector funcional]
+```
+
+#### User Profile Store
+```
+src/store/userProfileStore.ts
+├── useUserProfileStore            [Zustand store]
+├── selectUserProfile              [Selector]
+├── selectFinanceProfile           [Selector]
+├── selectUserBasicInfo            [Selector compuesto]
+├── selectFinanceSettings          [Selector compuesto]
+└── selectHasFinanceSetup          [Selector booleano]
+```
+
+#### Store Index & Hooks Wrapper
+```
+src/store/index.ts
+└── Exporta todos los stores y selectores
+
+src/hooks/useStores.ts ✨ NEW
+├── useAuth()                      [Wrapper para compatibilidad]
+├── useFinance()                   [Wrapper para compatibilidad]
+├── useFinanceProfile()            [Wrapper para compatibilidad]
+└── useUserProfile()               [Wrapper para compatibilidad]
+```
+
 ### Hooks Optimizados
 
 ```
@@ -159,15 +209,16 @@ OPTIMIZATION_SUMMARY.md            ✨ NEW
 ## 📊 Distribución de Archivos
 
 ```
-Total Archivos Creados: 13
+Total Archivos Creados: 18
 
 Por Categoría:
 ├── Core Utilities:        2 archivos (logger.ts, validation.ts)
 ├── Constants:             1 archivo  (analytics.ts)
-├── Hooks:                 3 archivos (useTransactions.ts, useAnalyticsHelpers.ts, useAnalyticsOptimized.ts)
-├── Components:            2 archivos (ErrorBoundary.tsx, AnalyticsSkeleton.tsx, AnalyticsSummaryOptimized.tsx)
-├── Documentation:         5 archivos (OPTIMIZATIONS_GUIDE, TESTING_SETUP, ZUSTAND_ROADMAP, LAZY_LOADING, OPTIMIZATION_SUMMARY)
-└── TOTAL: 13 archivos (~3,500 líneas de código)
+├── Hooks:                 4 archivos (useTransactions.ts, useAnalyticsHelpers.ts, useAnalyticsOptimized.ts, useStores.ts)
+├── Stores:                4 archivos (authStore.ts, financeStore.ts, userProfileStore.ts, index.ts)
+├── Components:            3 archivos (ErrorBoundary.tsx, AnalyticsSkeleton.tsx, AnalyticsSummaryOptimized.tsx)
+├── Documentation:         6 archivos (OPTIMIZATIONS_GUIDE, TESTING_SETUP, ZUSTAND_ROADMAP, ZUSTAND_USAGE, LAZY_LOADING, OPTIMIZATION_SUMMARY)
+└── TOTAL: 18 archivos (~4,500 líneas de código)
 ```
 
 ---
