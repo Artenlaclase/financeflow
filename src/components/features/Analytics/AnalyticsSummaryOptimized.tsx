@@ -3,8 +3,8 @@
 import { memo, useMemo } from 'react';
 import { Grid, Card, CardContent, Typography, Box } from '@mui/material';
 import { TrendingUp, TrendingDown, AccountBalance, Receipt } from '@mui/icons-material';
-import { AnalyticsSkeleton } from '../shared/Skeletons/AnalyticsSkeleton';
-import { useAnalyticsOptimized } from '@/hooks/useAnalyticsOptimized';
+import { AnalyticsSkeleton } from '@/components/shared/Skeletons/AnalyticsSkeleton';
+import { useAnalytics } from '@/hooks/useAnalyticsOptimized';
 
 interface AnalyticsSummaryProps {
   selectedPeriod: string;
@@ -121,7 +121,7 @@ export default memo(function AnalyticsSummary({
   selectedYear,
   selectedMonth
 }: AnalyticsSummaryProps) {
-  const analyticsData = useAnalyticsOptimized(selectedPeriod, selectedYear, selectedMonth);
+  const analyticsData = useAnalytics(selectedPeriod, selectedYear, selectedMonth);
 
   // Memoizar props para pasar al componente de contenido
   const contentProps = useMemo(
@@ -129,13 +129,13 @@ export default memo(function AnalyticsSummary({
       selectedPeriod,
       selectedYear,
       selectedMonth,
-      totalIncome: analyticsData.totalIncome,
-      totalExpenses: analyticsData.totalExpenses,
-      balance: analyticsData.balance,
-      fixedIncome: analyticsData.totalIncome * 0.5, // Aproximado, ajusta según tu lógica
-      fixedExpenses: analyticsData.totalExpenses * 0.5,
-      transactionIncome: analyticsData.totalIncome * 0.5,
-      transactionExpenses: analyticsData.totalExpenses * 0.5,
+      totalIncome: analyticsData.data.totalIncome,
+      totalExpenses: analyticsData.data.totalExpenses,
+      balance: analyticsData.data.balance,
+      fixedIncome: analyticsData.data.fixedIncomeTotal,
+      fixedExpenses: analyticsData.data.fixedExpensesTotal,
+      transactionIncome: analyticsData.data.transactionIncomeTotal,
+      transactionExpenses: analyticsData.data.transactionExpensesTotal,
       loading: analyticsData.loading,
       error: analyticsData.error
     }),
