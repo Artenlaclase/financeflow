@@ -14,7 +14,6 @@
 
 import { ReactNode } from 'react';
 import { SWRConfig } from 'swr';
-import { logger } from '@/lib/logger';
 
 // ==========================================
 // SWR Global Configuration
@@ -44,11 +43,11 @@ export const SWR_DEFAULT_CONFIG = {
 
   // Callbacks
   onSuccess: (data: any) => {
-    logger.log('✅ SWR Success:', { dataSize: JSON.stringify(data).length });
+    console.log('✅ SWR Success:', { dataSize: JSON.stringify(data).length });
   },
 
   onError: (error: Error) => {
-    logger.error('❌ SWR Error:', error.message);
+    console.error('❌ SWR Error:', error.message);
   },
 
   onErrorRetry: (error: any, key: string, config: any, revalidate: any, { retryCount }: any) => {
@@ -116,13 +115,11 @@ export const SWR_CONFIG_REALTIME = {
 
 interface SWRProviderProps {
   children: ReactNode;
-  config?: typeof SWR_DEFAULT_CONFIG;
+  config?: Record<string, any>;
 }
 
-export function SWRProvider({
-  children,
-  config = SWR_DEFAULT_CONFIG,
-}: SWRProviderProps) {
+export function SWRProvider(props: SWRProviderProps) {
+  const { children, config = SWR_DEFAULT_CONFIG } = props;
   return <SWRConfig value={config}>{children}</SWRConfig>;
 }
 
@@ -174,13 +171,13 @@ export const fetcherWithAuth = async (url: string, token?: string) => {
  */
 export function clearSWRCache() {
   // Esto se ejecutaría si usas SWRConfig con mutate
-  logger.log('🗑️ SWR cache cleared');
+  console.log('🗑️ SWR cache cleared');
 }
 
 /**
  * Revalidar clave específica
  */
 export function revalidateKey(key: string) {
-  logger.log(`🔄 Revalidating: ${key}`);
+  console.log(`🔄 Revalidating: ${key}`);
   // La revalidación ocurre automáticamente con SWR
 }

@@ -30,7 +30,8 @@ import {
   selectUserProfile,
   selectFinanceProfile,
   selectFinanceSettings,
-  selectHasFinanceSetup
+  selectHasFinanceSetup,
+  type UserProfileState
 } from '@/store/userProfileStore';
 
 /**
@@ -115,8 +116,8 @@ export const useFinanceProfile = () => {
  */
 export const useUserProfile = () => {
   const profile = useUserProfileStore(selectUserProfile);
-  const loading = useUserProfileStore((state) => state.loading);
-  const error = useUserProfileStore((state) => state.error);
+  const loading = useUserProfileStore((state: UserProfileState) => state.loading);
+  const error = useUserProfileStore((state: UserProfileState) => state.error);
 
   const { setUserProfile, updateUserProfile, clearUserProfile } =
     useUserProfileStore();
