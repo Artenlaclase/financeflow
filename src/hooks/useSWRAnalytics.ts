@@ -50,7 +50,6 @@ export function useSWRAnalyticsSummary(
 ) {
   const { user } = useAuth();
   const { transactions } = useTransactions();
-  const analyticsHelper = useAnalyticsSummary(transactions, year);
 
   const key =
     user?.uid && period && year
@@ -60,8 +59,27 @@ export function useSWRAnalyticsSummary(
   const { data, isLoading, error, mutate } = useSWRWithStore<AnalyticsSummary>(
     key,
     async () => {
-      // Usar helper de analytics para cálculos
-      return analyticsHelper.getSummaryForPeriod(period) as AnalyticsSummary;
+      // Calcular summary basado en transacciones
+      const yearTransactions = transactions?.filter(t => {
+        const txYear = new Date(t.date).getFullYear();
+        return txYear === year;
+      }) || [];
+
+      const income = yearTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const expenses = yearTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      return {
+        totalIncome: income,
+        totalExpenses: expenses,
+        balance: income - expenses,
+        savingsRate: income > 0 ? ((income - expenses) / income) * 100 : 0,
+        numberOfTransactions: yearTransactions.length,
+      } as AnalyticsSummary;
     },
     {
       dedupingInterval: 180000, // 3 minutos
@@ -123,9 +141,9 @@ export function useSWRCategoryBreakdown(
       });
 
       // Calcular porcentajes
-      Object.keys(breakdown).forEach((cat) => {
-        breakdown[cat].percentage =
-          total > 0 ? (breakdown[cat].amount / total) * 100 : 0;
+      Object.keys(breakdown).forEach((catKey) => {
+        breakdown[catKey as keyof CategoryBreakdown].percentage =
+          total > 0 ? (breakdown[catKey as keyof CategoryBreakdown].amount / total) * 100 : 0;
       });
 
       return breakdown;

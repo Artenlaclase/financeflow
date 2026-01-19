@@ -21,19 +21,7 @@
 import { useSWRWithStore } from './useSWRWithStore';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
-
-export interface Transaction {
-  id: string;
-  userId: string;
-  type: 'income' | 'expense' | 'compra' | 'debt';
-  category: string;
-  amount: number;
-  description: string;
-  date: Date | string;
-  createdAt: Date | string;
-  paymentMethod?: string;
-  tags?: string[];
-}
+import type { Transaction } from '@/contexts/FinanceContext';
 
 /**
  * Hook para cachear transacciones del usuario actual
@@ -49,7 +37,7 @@ export function useSWRTransactions() {
       async () => {
         // Los datos reales vienen del context
         // SWR solo cachea y valida
-        return recentTransactions || [];
+        return (recentTransactions || []) as Transaction[];
       },
       {
         revalidateOnFocus: true,
@@ -82,7 +70,7 @@ export function useSWRTransactionsByCategory(category: string | null) {
     user?.uid && category ? `transactions-${user.uid}-${category}` : null,
     async () => {
       return (
-        recentTransactions?.filter((t) => t.category === category) || []
+        (recentTransactions?.filter((t) => t.category === category) || []) as Transaction[]
       );
     },
     {
@@ -119,10 +107,10 @@ export function useSWRTransactionsByDateRange(
     async () => {
       if (!startDate || !endDate) return [];
       return (
-        recentTransactions?.filter((t) => {
+        (recentTransactions?.filter((t) => {
           const date = typeof t.date === 'string' ? new Date(t.date) : t.date;
           return date >= startDate && date <= endDate;
-        }) || []
+        }) || []) as Transaction[]
       );
     },
     {

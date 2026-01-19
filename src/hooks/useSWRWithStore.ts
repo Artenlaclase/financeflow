@@ -73,14 +73,10 @@ export function useSWRWithStore<T>(
       focusThrottleInterval,
       errorRetryCount,
       errorRetryInterval,
-      // Actualización optimista
-      optimisticData: optimisticData ?? data,
-      // Mantener datos previos mientras carga
-      keepPreviousData: true,
       // Revalidar cuando regresa el foco
       revalidateOnReconnect: true,
       ...swrConfig,
-    }
+    } as any
   );
 
   // Guardar datos previos para rollback
@@ -130,9 +126,8 @@ export function useSWRWithStore<T>(
   return {
     data,
     isLoading,
-    isValidating,
     error,
-    isValidating: isLoading && !data,
+    isValidating,
     mutate: safeMutate,
     refetch: () => mutate(),
     // Estados útiles

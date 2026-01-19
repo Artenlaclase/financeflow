@@ -11,7 +11,8 @@ import {
   selectUser,
   selectIsAuthenticated,
   selectAuthError,
-  selectAuthStatus
+  selectAuthStatus,
+  type AuthState
 } from '@/store/authStore';
 
 import {
@@ -20,7 +21,8 @@ import {
   selectIncome,
   selectExpenses,
   selectFinanceSummary,
-  selectRecentTransactions
+  selectRecentTransactions,
+  type FinanceState
 } from '@/store/financeStore';
 
 import {
@@ -40,12 +42,13 @@ export const useAuth = () => {
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const error = useAuthStore(selectAuthError);
   const { setUser, setLoading, setError, logout, clearError } = useAuthStore();
+  const loading = useAuthStore((state: AuthState) => state.loading);
 
   return {
     user,
     isAuthenticated,
     error,
-    loading: useAuthStore((state) => state.loading),
+    loading,
     setUser,
     setLoading,
     setError,
@@ -60,8 +63,8 @@ export const useAuth = () => {
 export const useFinance = () => {
   const summary = useFinanceStore(selectFinanceSummary);
   const recentTransactions = useFinanceStore(selectRecentTransactions);
-  const loading = useFinanceStore((state) => state.loading);
-  const error = useFinanceStore((state) => state.error);
+  const loading = useFinanceStore((state: FinanceState) => state.loading);
+  const error = useFinanceStore((state: FinanceState) => state.error);
 
   const {
     setTransactions,
