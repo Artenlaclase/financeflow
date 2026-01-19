@@ -209,16 +209,17 @@ OPTIMIZATION_SUMMARY.md            ✨ NEW
 ## 📊 Distribución de Archivos
 
 ```
-Total Archivos Creados: 18
+Total Archivos Creados: 21
 
 Por Categoría:
 ├── Core Utilities:        2 archivos (logger.ts, validation.ts)
 ├── Constants:             1 archivo  (analytics.ts)
-├── Hooks:                 4 archivos (useTransactions.ts, useAnalyticsHelpers.ts, useAnalyticsOptimized.ts, useStores.ts)
+├── Hooks:                 5 archivos (useTransactions.ts, useAnalyticsHelpers.ts, useAnalyticsOptimized.ts, useStores.ts, useSWRWithStore.ts)
 ├── Stores:                4 archivos (authStore.ts, financeStore.ts, userProfileStore.ts, index.ts)
-├── Components:            3 archivos (ErrorBoundary.tsx, AnalyticsSkeleton.tsx, AnalyticsSummaryOptimized.tsx)
-├── Documentation:         6 archivos (OPTIMIZATIONS_GUIDE, TESTING_SETUP, ZUSTAND_ROADMAP, ZUSTAND_USAGE, LAZY_LOADING, OPTIMIZATION_SUMMARY)
-└── TOTAL: 18 archivos (~4,500 líneas de código)
+├── SWR:                   1 archivo  (src/lib/swr/config.ts)
+├── Components:            4 archivos (ErrorBoundary.tsx, AnalyticsSkeleton.tsx, AnalyticsSummaryOptimized.tsx, AnalyticsLazy.ts)
+├── Documentation:         9 archivos (OPTIMIZATIONS_GUIDE, TESTING_SETUP, ZUSTAND_ROADMAP, ZUSTAND_USAGE, LAZY_LOADING, PHASE_2_SUMMARY, PHASE_3_SWR_LAZY_LOADING, OPTIMIZATION_SUMMARY, FILES_STRUCTURE)
+└── TOTAL: 21 archivos (~5,300 líneas de código)
 ```
 
 ---
