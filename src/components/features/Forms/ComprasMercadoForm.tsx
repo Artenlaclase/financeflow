@@ -23,6 +23,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useProductosHistorial } from '@/hooks/useProductosHistorial';
+import { useSuperMercadosUbicaciones } from '@/hooks/useSuperMercadosUbicaciones';
 
 interface ProductoCompra {
   nombre: string;
@@ -105,6 +106,7 @@ const metodosPago = [
 export default function ComprasMercadoForm({ open, onClose, onComplete }: ComprasMercadoFormProps) {
   const { user } = useAuth();
   const { productos: productosHistorial } = useProductosHistorial();
+  const { supermercados: supermercadosDisponibles, ubicaciones: ubicacionesDisponibles, agregarSupermercadoPersonalizado, agregarUbicacionPersonalizada } = useSuperMercadosUbicaciones();
   const [supermercado, setSupermercado] = useState('');
   const [supermercadoPersonalizado, setSupermercadoPersonalizado] = useState('');
   const [ubicacion, setUbicacion] = useState('');
@@ -272,6 +274,17 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       }
       
       const supermercadoFinal = supermercado === 'otro' ? supermercadoPersonalizado.trim() : supermercado;
+      
+      // Guardar supermercado personalizado si es nuevo
+      if (supermercado === 'otro') {
+        await agregarSupermercadoPersonalizado(supermercadoFinal);
+      }
+      
+      // Guardar ubicación personalizada si es nueva
+      const ubicacionExiste = ubicacionesDisponibles.some(u => u.value.toLowerCase() === ubicacion.toLowerCase());
+      if (!ubicacionExiste) {
+        await agregarUbicacionPersonalizada(ubicacion);
+      }
 
       // Limpiar productos de valores undefined
       const productosLimpios = productos.map(producto => {
@@ -451,7 +464,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                 onChange={(e) => setSupermercado(e.target.value)}
                 label="Supermercado"
               >
-                {supermercados.map((super_) => (
+                {supermercadosDisponibles.map((super_) => (
                   <MenuItem key={super_.value} value={super_.value}>
                     {super_.label}
                   </MenuItem>
@@ -476,7 +489,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
                 onChange={(e) => setUbicacion(e.target.value)}
                 label="Ubicación"
               >
-                {ubicaciones.map((ubic) => (
+                {ubicacionesDisponibles.map((ubic) => (
                   <MenuItem key={ubic.value} value={ubic.value}>
                     {ubic.label}
                   </MenuItem>
