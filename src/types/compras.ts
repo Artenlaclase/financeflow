@@ -36,9 +36,9 @@ export interface CompraTransaction {
   id: string;
   amount: number;
   description: string;
-  date: any;
+  date: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
   detalleCompra: CompraDetalle;
-  createdAt: any;
+  createdAt: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
 }
 
 export interface ProductoHistorial {

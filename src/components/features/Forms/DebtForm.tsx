@@ -11,8 +11,7 @@ import {
   Box,
   Alert
 } from '@mui/material';
-import { addDoc, collection } from 'firebase/firestore';
-import { db } from '../../../lib/firebase/config';
+import { addTransactionWithLegacy } from '@/lib/firebase/transactionWriter';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useFinance } from '../../../contexts/FinanceContext';
 
@@ -49,12 +48,14 @@ export default function DebtForm({ open, onClose }: DebtFormProps) {
     }
 
     try {
-      await addDoc(collection(db, 'users', user.uid, 'debts'), {
+      // Usar doble escritura: transactions/ + legacy debts/
+      await addTransactionWithLegacy(user.uid, {
+        type: 'debt',
         amount: parseFloat(amount),
+        category: 'deudas',
+        date: new Date(dueDate),
         description,
-        dueDate: new Date(dueDate),
-        paid: false,
-        createdAt: new Date()
+        status: 'pending',
       });
 
       // Reset form

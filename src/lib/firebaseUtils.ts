@@ -9,7 +9,7 @@ export interface Transaction {
   amount: number;
   description?: string;
   category?: string;
-  date: any;
+  date: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
   paymentMethod?: 'efectivo' | 'debito' | 'credito';
   installments?: number;
   merchant?: string;

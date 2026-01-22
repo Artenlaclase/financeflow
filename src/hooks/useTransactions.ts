@@ -12,7 +12,7 @@ export interface Transaction {
   type: 'income' | 'expense' | 'compra';
   amount: number;
   category: string;
-  date: any; // Firebase Timestamp o Date
+  date: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
   description?: string;
 }
 

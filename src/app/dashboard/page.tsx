@@ -12,6 +12,7 @@ import RecentTransactions from '../../components/features/Dashboard/RecentTransa
 import FixedExpensesCard from '../../components/features/Dashboard/FixedExpensesCard';
 import FinanceSetupForm from '../../components/shared/Auth/FinanceSetupForm';
 import EditProfileDialog from '../../components/shared/Auth/EditProfileDialog';
+import MigrationButton from '../../components/features/Migration/MigrationButton';
 import AuthGuard from '../../components/shared/Auth/AuthGuard';
 import { useRouter } from 'next/navigation';
 import { Analytics, Edit, Person, ShoppingCart, Settings, Logout, Menu as MenuIcon, Close as CloseIcon } from '@mui/icons-material';
@@ -121,10 +122,11 @@ export default function DashboardPage() {
           </Grid>
           
           <Grid item xs={12} md={6}>
-            <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
-            <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-              Dashboard Financiero - {new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
-            </Typography>
+            <Box sx={{ textAlign: { xs: 'center', md: 'right' }, display: 'flex', gap: 2, justifyContent: { xs: 'center', md: 'flex-end' }, alignItems: 'center' }}>
+              <Typography variant="h5" component="h2">
+                {new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+              </Typography>
+              <MigrationButton />
             </Box>
           </Grid>
         </Grid>
