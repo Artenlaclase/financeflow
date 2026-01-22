@@ -7,7 +7,7 @@
 
 ### Tech Stack
 - **Framework**: Next.js 14 (App Router) with TypeScript (strict mode)
-- **UI**: Material-UI v5 + Tailwind CSS
+- **UI**: Material-UI v5 (complete design system)
 - **Auth**: Firebase Authentication (email/password)
 - **Database**: Firebase Firestore
 - **Charts**: Recharts for data visualization
@@ -70,9 +70,9 @@ Use `guardarTransaccionSimple()` [src/lib/firebaseSimple.ts](src/lib/firebaseSim
 
 ### 6. **Theme & Styling**
 - MUI theme centralized at [src/styles/theme.ts](src/styles/theme.ts)
-- Tailwind CSS for utility classes (spacing, responsive layouts)
-- Component styling: Use `sx` prop in MUI components or `className` for Tailwind
-- No CSS modules; leverage both frameworks' composition
+- Component styling: Use `sx` prop for all styling needs
+- MUI provides complete design system with responsive breakpoints
+- Typography, spacing, colors all managed through MUI theme
 
 ### 7. **Type Safety**
 - Define interfaces for all Firebase documents (see `Transaction` interface in [src/contexts/FinanceContext.tsx](src/contexts/FinanceContext.tsx#L9-L15))
