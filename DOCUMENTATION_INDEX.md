@@ -1,8 +1,8 @@
-# 📑 ÍNDICE DE DOCUMENTACIÓN - OPTIMIZACIONES FINTRACKER v0.2.0
+# 📑 ÍNDICE DE DOCUMENTACIÓN - OPTIMIZACIONES FINTRACKER v0.5.0
 
-**Última Actualización:** 19 de Enero 2026  
-**Versión:** 0.2.0  
-**Archivos Creados:** 13 (3,500+ líneas de código)
+**Última Actualización:** 21 de Enero 2026  
+**Versión:** 0.5.0 (Fase 4 Iniciada)  
+**Archivos Creados:** 21+ archivos de tests y configuración
 
 ---
 
@@ -14,20 +14,21 @@
    - Métricas clave
    - ROI de las optimizaciones
 
-2. **[OPTIMIZATION_SUMMARY.md](OPTIMIZATION_SUMMARY.md)**
-   - Resumen ejecutivo detallado
-   - Impacto por optimización
-   - Checklist de implementación
+2. **[FASE_4_INICIO.md](FASE_4_INICIO.md)** ← **NUEVO**
+   - Testing & Quality Assurance iniciado
+   - 66 tests implementados
+   - 85%+ coverage en utils
 
 ### Para Developers 👨‍💻
-1. **[QUICK_SUMMARY.md](QUICK_SUMMARY.md)** ← **EMPIEZA AQUÍ**
-   - Visión general de 5 minutos
-   - Qué cambió en la arquitectura
+1. **[FASE_4_INICIO.md](FASE_4_INICIO.md)** ← **EMPIEZA AQUÍ (NUEVO)**
+   - Setup completo de Vitest
+   - Patrones de testing
+   - Helpers y mocks
 
-2. **[OPTIMIZATIONS_GUIDE.md](docs/OPTIMIZATIONS_GUIDE.md)**
-   - Guía completa de implementación
-   - Ejemplos de código
-   - Cómo migrar gradualmente
+2. **[tests/README.md](tests/README.md)** ← **NUEVO**
+   - Guía práctica de testing
+   - Comandos y ejemplos
+   - Referencias rápidas
 
 3. **[FILES_STRUCTURE.md](FILES_STRUCTURE.md)**
    - Dónde está cada archivo

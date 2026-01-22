@@ -200,37 +200,37 @@ describe('validation', () => {
 
   describe('getFirestoreErrorMessage', () => {
     it('should return user-friendly message for permission-denied', () => {
-      const message = getFirestoreErrorMessage('permission-denied');
+      const message = getFirestoreErrorMessage({ code: 'permission-denied' });
       expect(message).toContain('permisos');
     });
 
     it('should return user-friendly message for not-found', () => {
-      const message = getFirestoreErrorMessage('not-found');
-      expect(message).toContain('no se encontró');
+      const message = getFirestoreErrorMessage({ code: 'not-found' });
+      expect(message).toContain('no existen');
     });
 
     it('should return user-friendly message for already-exists', () => {
-      const message = getFirestoreErrorMessage('already-exists');
-      expect(message).toContain('ya existe');
+      const message = getFirestoreErrorMessage({ code: 'already-exists' });
+      expect(message).toContain('ya existen');
     });
 
     it('should return user-friendly message for unauthenticated', () => {
-      const message = getFirestoreErrorMessage('unauthenticated');
-      expect(message).toContain('autenticado');
+      const message = getFirestoreErrorMessage({ code: 'unauthenticated' });
+      expect(message).toContain('autenticarte');
     });
 
     it('should return user-friendly message for unavailable', () => {
-      const message = getFirestoreErrorMessage('unavailable');
+      const message = getFirestoreErrorMessage({ code: 'unavailable' });
       expect(message).toContain('disponible');
     });
 
     it('should return generic message for unknown errors', () => {
-      const message = getFirestoreErrorMessage('unknown-error-code');
+      const message = getFirestoreErrorMessage({ code: 'unknown-error-code' });
       expect(message).toContain('Error');
     });
 
     it('should handle empty string', () => {
-      const message = getFirestoreErrorMessage('');
+      const message = getFirestoreErrorMessage({ code: '' });
       expect(message).toBeTruthy();
     });
   });
