@@ -7,7 +7,7 @@
 
 ### Tech Stack
 - **Framework**: Next.js 14 (App Router) with TypeScript (strict mode)
-- **UI**: Material-UI v5 + Tailwind CSS
+- **UI**: Material-UI v5 (complete design system)
 - **Auth**: Firebase Authentication (email/password)
 - **Database**: Firebase Firestore
 - **Charts**: Recharts for data visualization
@@ -53,8 +53,8 @@ All Firebase Timestamp values must use `safeDate()` utility - it converts Firest
 
 ### 2. **Client-side Components**
 Mark components with `"use client"` at the top. Context consumption requires client rendering. Examples:
-- [src/contexts/FinanceContext.tsx](src/contexts/FinanceContext.tsx#L1)
-- [src/app/providers.tsx](src/app/providers.tsx#L1)
+- [src/contexts/FinanceContext.tsx](../src/contexts/FinanceContext.tsx#L1)
+- [src/app/providers.tsx](../src/app/providers.tsx#L1)
 
 ### 3. **Real-time Listeners Pattern**
 Use `onSnapshot()` for live data, not one-time `getDocs()`. The `FinanceProvider` manages listeners and cleanup:
@@ -63,19 +63,19 @@ Use `onSnapshot()` for live data, not one-time `getDocs()`. The `FinanceProvider
 - Always unsubscribe listeners on unmount to prevent memory leaks
 
 ### 4. **Simple Transactional Data**
-Use `guardarTransaccionSimple()` [src/lib/firebaseSimple.ts](src/lib/firebaseSimple.ts) for adding transactions. It enforces structure: `{type, category, amount, description, userId, date, createdAt}`.
+Use `guardarTransaccionSimple()` [src/lib/firebaseSimple.ts](../src/lib/firebaseSimple.ts) for adding transactions. It enforces structure: `{type, category, amount, description, userId, date, createdAt}`.
 
 ### 5. **Analytics Hook Pattern**
 `useAnalytics()` and `useAnalyticsSimplified()` accept `selectedPeriod` and `selectedYear` props. They fetch and aggregate transactions across users' financial data. Returns `AnalyticsData` interface with monthly rollups, category breakdowns, and totals.
 
 ### 6. **Theme & Styling**
-- MUI theme centralized at [src/styles/theme.ts](src/styles/theme.ts)
-- Tailwind CSS for utility classes (spacing, responsive layouts)
-- Component styling: Use `sx` prop in MUI components or `className` for Tailwind
-- No CSS modules; leverage both frameworks' composition
+- MUI theme centralized at [src/styles/theme.ts](../src/styles/theme.ts)
+- Component styling: Use `sx` prop for all styling needs
+- MUI provides complete design system with responsive breakpoints
+- Typography, spacing, colors all managed through MUI theme
 
 ### 7. **Type Safety**
-- Define interfaces for all Firebase documents (see `Transaction` interface in [src/contexts/FinanceContext.tsx](src/contexts/FinanceContext.tsx#L9-L15))
+- Define interfaces for all Firebase documents (see `Transaction` interface in [src/contexts/FinanceContext.tsx](../src/contexts/FinanceContext.tsx#L9-L15))
 - Use `@/* path aliases` defined in `tsconfig.json` for imports: `import { useAuth } from '@/contexts/AuthContext'`
 
 ## Development Workflow

@@ -44,58 +44,6 @@ interface ComprasMercadoFormProps {
   onComplete: () => void;
 }
 
-const supermercados = [
-  { value: 'Jumbo', label: 'Jumbo 🛒' },
-  { value: 'Lider', label: 'Líder 🛒' },
-  { value: 'Unimarc', label: 'Unimarc 🛒' },
-  { value: 'Santa Isabel', label: 'Santa Isabel 🛒' },
-  { value: 'Tottus', label: 'Tottus 🛒' },
-  { value: 'Foresta', label: 'Foresta 🛒' },
-  { value: 'San Roberto', label: 'San Roberto 🛒' },
-  { value: 'Central', label: 'Central 🛒' },
-  { value: 'otro', label: 'Otro (personalizar)' }
-];
-
-const ubicaciones = [
-  { value: 'La Florida', label: 'La Florida 📍' },
-  { value: 'Puente Alto', label: 'Puente Alto 📍' },
-  { value: 'Maipú', label: 'Maipú 📍' },
-  { value: 'Las Condes', label: 'Las Condes 📍' },
-  { value: 'Providencia', label: 'Providencia 📍' },
-  { value: 'Estación Central', label: 'Estación Central 📍' },
-  // VI Región - Comunas
-  { value: 'Rancagua', label: 'Rancagua 📍' },
-  { value: 'Machalí', label: 'Machalí 📍' },
-  { value: 'Graneros', label: 'Graneros 📍' },
-  { value: 'Codegua', label: 'Codegua 📍' },
-  { value: 'Doñihue', label: 'Doñihue 📍' },
-  { value: 'Coltauco', label: 'Coltauco 📍' },
-  { value: 'Coinco', label: 'Coinco 📍' },
-  { value: 'Rengo', label: 'Rengo 📍' },
-  { value: 'Requínoa', label: 'Requínoa 📍' },
-  { value: 'Olivar', label: 'Olivar 📍' },
-  { value: 'Mostazal', label: 'Mostazal 📍' },
-  { value: 'San Vicente', label: 'San Vicente 📍' },
-  { value: 'Pichidegua', label: 'Pichidegua 📍' },
-  { value: 'Peumo', label: 'Peumo 📍' },
-  { value: 'Las Cabras', label: 'Las Cabras 📍' },
-  { value: 'San Fernando', label: 'San Fernando 📍' },
-  { value: 'Chimbarongo', label: 'Chimbarongo 📍' },
-  { value: 'Placilla', label: 'Placilla 📍' },
-  { value: 'Nancagua', label: 'Nancagua 📍' },
-  { value: 'Chépica', label: 'Chépica 📍' },
-  { value: 'Santa Cruz', label: 'Santa Cruz 📍' },
-  { value: 'Lolol', label: 'Lolol 📍' },
-  { value: 'Pumanque', label: 'Pumanque 📍' },
-  { value: 'Palmilla', label: 'Palmilla 📍' },
-  { value: 'Peralillo', label: 'Peralillo 📍' },
-  { value: 'Litueche', label: 'Litueche 📍' },
-  { value: 'Rapel', label: 'Rapel 📍' },
-  { value: 'Navidad', label: 'Navidad 📍' },
-  { value: 'Pichilemu', label: 'Pichilemu 📍' }
-  ,{ value: 'Melipilla', label: 'Melipilla 📍' }
-];
-
 const metodosPago = [
   { value: 'efectivo', label: 'Efectivo 💵' },
   { value: 'debito', label: 'Débito 💳' },
@@ -108,7 +56,6 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
   const { productos: productosHistorial } = useProductosHistorial();
   const { supermercados: supermercadosDisponibles, ubicaciones: ubicacionesDisponibles, agregarSupermercadoPersonalizado, agregarUbicacionPersonalizada } = useSuperMercadosUbicaciones();
   const [supermercado, setSupermercado] = useState('');
-  const [supermercadoPersonalizado, setSupermercadoPersonalizado] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [metodoPago, setMetodoPago] = useState('');
   const [cuotas, setCuotas] = useState('');
@@ -254,12 +201,6 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       }
     }
 
-    // Validar supermercado personalizado
-    if (supermercado === 'otro' && !supermercadoPersonalizado.trim()) {
-      setError('Ingresa el nombre del supermercado personalizado');
-      return;
-    }
-
     setLoading(true);
     setError('');
 
@@ -273,16 +214,27 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
         return;
       }
       
-      const supermercadoFinal = supermercado === 'otro' ? supermercadoPersonalizado.trim() : supermercado;
+      const supermercadoFinal = supermercado.trim();
+      
+      // Verificar si el supermercado es nuevo (no está en la lista predefinida)
+      const supermercadoExiste = supermercadosDisponibles.some(
+        s => s.value.toLowerCase() === supermercadoFinal.toLowerCase()
+      );
       
       // Guardar supermercado personalizado si es nuevo
-      if (supermercado === 'otro') {
+      if (!supermercadoExiste) {
+        console.log('🆕 Guardando nuevo supermercado:', supermercadoFinal);
         await agregarSupermercadoPersonalizado(supermercadoFinal);
       }
       
+      // Verificar si la ubicación es nueva (no está en la lista predefinida)
+      const ubicacionExiste = ubicacionesDisponibles.some(
+        u => u.value.toLowerCase() === ubicacion.toLowerCase()
+      );
+      
       // Guardar ubicación personalizada si es nueva
-      const ubicacionExiste = ubicacionesDisponibles.some(u => u.value.toLowerCase() === ubicacion.toLowerCase());
       if (!ubicacionExiste) {
+        console.log('🆕 Guardando nueva ubicación:', ubicacion);
         await agregarUbicacionPersonalizada(ubicacion);
       }
 
@@ -388,10 +340,9 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
 
       // Resetear formulario
       setSupermercado('');
-      setSupermercadoPersonalizado('');
       setUbicacion('');
       setMetodoPago('');
-  setProductos([]);
+      setProductos([]);
       setNombreProducto('');
       setMarcaProducto('');
       setMarcasDisponibles([]);
@@ -401,7 +352,7 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
       setPrecioKiloProducto('');
       setPrecioLitroProducto('');
       setError('');
-  setCuotas('');
+      setCuotas('');
 
       onComplete();
       console.log('🎉 Proceso completado - onComplete() llamado');
@@ -457,45 +408,81 @@ export default function ComprasMercadoForm({ open, onClose, onComplete }: Compra
               onChange={(e) => setFecha(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
-            <FormControl fullWidth required>
-              <InputLabel>Supermercado</InputLabel>
-              <Select
-                value={supermercado}
-                onChange={(e) => setSupermercado(e.target.value)}
-                label="Supermercado"
-              >
-                {supermercadosDisponibles.map((super_) => (
-                  <MenuItem key={super_.value} value={super_.value}>
-                    {super_.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              freeSolo
+              options={supermercadosDisponibles}
+              getOptionLabel={(option) => 
+                typeof option === 'string' 
+                  ? option 
+                  : option.label
+              }
+              value={
+                supermercado 
+                  ? supermercadosDisponibles.find(s => s.value === supermercado) || supermercado
+                  : null
+              }
+              onChange={(event, value) => {
+                if (typeof value === 'string') {
+                  setSupermercado(value);
+                } else if (value) {
+                  setSupermercado(value.value);
+                } else {
+                  setSupermercado('');
+                }
+              }}
+              onInputChange={(event, value) => {
+                // Permitir escritura libre
+                if (event?.type === 'change') {
+                  setSupermercado(value);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Supermercado"
+                  required
+                  helperText="Selecciona de la lista o escribe uno nuevo"
+                />
+              )}
+            />
 
-            {supermercado === 'otro' && (
-              <TextField
-                fullWidth
-                label="Nombre del supermercado"
-                value={supermercadoPersonalizado}
-                onChange={(e) => setSupermercadoPersonalizado(e.target.value)}
-                required
-              />
-            )}
-
-            <FormControl fullWidth required>
-              <InputLabel>Ubicación</InputLabel>
-              <Select
-                value={ubicacion}
-                onChange={(e) => setUbicacion(e.target.value)}
-                label="Ubicación"
-              >
-                {ubicacionesDisponibles.map((ubic) => (
-                  <MenuItem key={ubic.value} value={ubic.value}>
-                    {ubic.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              freeSolo
+              options={ubicacionesDisponibles}
+              getOptionLabel={(option) => 
+                typeof option === 'string' 
+                  ? option 
+                  : option.label
+              }
+              value={
+                ubicacion 
+                  ? ubicacionesDisponibles.find(u => u.value === ubicacion) || ubicacion
+                  : null
+              }
+              onChange={(event, value) => {
+                if (typeof value === 'string') {
+                  setUbicacion(value);
+                } else if (value) {
+                  setUbicacion(value.value);
+                } else {
+                  setUbicacion('');
+                }
+              }}
+              onInputChange={(event, value) => {
+                // Permitir escritura libre
+                if (event?.type === 'change') {
+                  setUbicacion(value);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Ubicación"
+                  required
+                  helperText="Selecciona de la lista o escribe una nueva"
+                />
+              )}
+            />
 
             <FormControl fullWidth required>
               <InputLabel>Método de pago</InputLabel>

@@ -19,7 +19,9 @@ export interface UbicacionItem {
 
 export const useSuperMercadosUbicaciones = () => {
   const { user } = useAuth();
-  const [supermercados, setSupermercados] = useState<SupermercadoItem[]>([
+  
+  // Valores por defecto constantes
+  const supermercadosBase: SupermercadoItem[] = [
     { value: 'Jumbo', label: 'Jumbo 🛒' },
     { value: 'Lider', label: 'Líder 🛒' },
     { value: 'Unimarc', label: 'Unimarc 🛒' },
@@ -28,9 +30,9 @@ export const useSuperMercadosUbicaciones = () => {
     { value: 'Foresta', label: 'Foresta 🛒' },
     { value: 'San Roberto', label: 'San Roberto 🛒' },
     { value: 'Central', label: 'Central 🛒' },
-  ]);
+  ];
   
-  const [ubicaciones, setUbicaciones] = useState<UbicacionItem[]>([
+  const ubicacionesBase: UbicacionItem[] = [
     { value: 'La Florida', label: 'La Florida 📍' },
     { value: 'Puente Alto', label: 'Puente Alto 📍' },
     { value: 'Maipú', label: 'Maipú 📍' },
@@ -67,7 +69,10 @@ export const useSuperMercadosUbicaciones = () => {
     { value: 'Navidad', label: 'Navidad 📍' },
     { value: 'Pichilemu', label: 'Pichilemu 📍' },
     { value: 'Melipilla', label: 'Melipilla 📍' }
-  ]);
+  ];
+  
+  const [supermercados, setSupermercados] = useState<SupermercadoItem[]>(supermercadosBase);
+  const [ubicaciones, setUbicaciones] = useState<UbicacionItem[]>(ubicacionesBase);
   
   const [loading, setLoading] = useState(true);
 
@@ -121,13 +126,12 @@ export const useSuperMercadosUbicaciones = () => {
 
         // Combinar: primero los por defecto, luego los personalizados
         setSupermercados([
-          ...supermercados,
-          ...customSupermercados,
-          { value: 'otro', label: 'Otro (personalizar)' }
+          ...supermercadosBase,
+          ...customSupermercados
         ]);
 
         setUbicaciones([
-          ...ubicaciones,
+          ...ubicacionesBase,
           ...customUbicaciones
         ]);
       } catch (error) {
@@ -145,25 +149,30 @@ export const useSuperMercadosUbicaciones = () => {
 
     try {
       // Verificar que no exista ya
-      const existe = supermercados.some(s => s.value.toLowerCase() === nombre.toLowerCase());
+      const existe = supermercados.some(s => s.value.toLowerCase() === nombre.trim().toLowerCase());
       if (existe) {
         console.log('Supermercado ya existe en el listado');
         return true;
       }
 
+      console.log('💾 Guardando nuevo supermercado en Firestore:', nombre.trim());
+      
       await addDoc(collection(db, 'supermercados-personalizados'), {
         userId: user.uid,
         nombre: nombre.trim(),
         createdAt: Timestamp.now()
       });
 
-      // Actualizar estado local
-      const newItem = {
+      // Actualizar estado local usando función updater para evitar stale closures
+      const newItem: SupermercadoItem = {
         value: nombre.trim(),
         label: `${nombre.trim()} 🛒`,
         personalizado: true
       };
-      setSupermercados(prev => [...prev.filter(s => s.value !== 'otro'), newItem, { value: 'otro', label: 'Otro (personalizar)' }]);
+      
+      setSupermercados(prev => [...prev, newItem]);
+      
+      console.log('✅ Supermercado agregado exitosamente:', nombre.trim());
 
       return true;
     } catch (error) {
@@ -177,25 +186,30 @@ export const useSuperMercadosUbicaciones = () => {
 
     try {
       // Verificar que no exista ya
-      const existe = ubicaciones.some(u => u.value.toLowerCase() === nombre.toLowerCase());
+      const existe = ubicaciones.some(u => u.value.toLowerCase() === nombre.trim().toLowerCase());
       if (existe) {
         console.log('Ubicación ya existe en el listado');
         return true;
       }
 
+      console.log('💾 Guardando nueva ubicación en Firestore:', nombre.trim());
+      
       await addDoc(collection(db, 'ubicaciones-personalizadas'), {
         userId: user.uid,
         nombre: nombre.trim(),
         createdAt: Timestamp.now()
       });
 
-      // Actualizar estado local
-      const newItem = {
+      // Actualizar estado local usando función updater para evitar stale closures
+      const newItem: UbicacionItem = {
         value: nombre.trim(),
         label: `${nombre.trim()} 📍`,
         personalizado: true
       };
+      
       setUbicaciones(prev => [...prev, newItem]);
+      
+      console.log('✅ Ubicación agregada exitosamente:', nombre.trim());
 
       return true;
     } catch (error) {
