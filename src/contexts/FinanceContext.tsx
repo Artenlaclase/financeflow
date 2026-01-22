@@ -65,6 +65,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       let totalIncome = 0;
       let totalExpenses = 0;
       const allTransactions: Transaction[] = [];
+      const unpaidDebts: any[] = [];
       
       snapshot.docs.forEach(doc => {
         const data = doc.data();
@@ -79,10 +80,22 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         
         allTransactions.push(transaction);
         
+        // Calcular totales
         if (data.type === 'income') {
           totalIncome += data.amount || 0;
         } else if (data.type === 'expense' || data.type === 'compra') {
           totalExpenses += data.amount || 0;
+        } else if (data.type === 'debt' && data.status !== 'paid') {
+          // Procesar deudas no pagadas
+          unpaidDebts.push({
+            id: doc.id,
+            amount: data.amount || 0,
+            description: data.description || '',
+            creditor: data.creditor || '',
+            status: data.status || 'pending',
+            date: data.date,
+            paid: false
+          });
         }
       });
       
@@ -90,19 +103,21 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         total: allTransactions.length,
         income: totalIncome,
         expenses: totalExpenses,
+        debts: unpaidDebts.length,
         transactions: allTransactions
       });
       
-  // Ordenar todas las transacciones por fecha (más recientes primero)
+      // Ordenar todas las transacciones por fecha (más recientes primero)
       allTransactions.sort((a, b) => {
         const dateA = safeDate(a.date) || new Date(0);
         const dateB = safeDate(b.date) || new Date(0);
         return dateB.getTime() - dateA.getTime();
       });
       
-  setIncome(totalIncome);
-  setExpenses(totalExpenses);
-  setRecentTransactions(allTransactions); // Mantener todas para que el dashboard filtre por mes
+      setIncome(totalIncome);
+      setExpenses(totalExpenses);
+      setDebts(unpaidDebts);
+      setRecentTransactions(allTransactions);
     }, (error) => {
       console.error('❌ Error fetching global transactions:', error);
       console.error('❌ Error details:', {
@@ -195,22 +210,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       console.log('Legacy expenses query error (expected if no legacy data):', error);
     });
 
-    // Obtener deudas
-    const debtsQuery = query(
-      collection(db, 'users', user.uid, 'debts'),
-      where('paid', '==', false)
-    );
-    const unsubscribeDebts = onSnapshot(debtsQuery, (snapshot) => {
-      setDebts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => {
-      console.log('Debts query error (expected if no debts data):', error);
-    });
-
+    // LISTENERS LEGACY REMOVIDOS - Ahora deudas vienen de transactions/
+    // Los datos legacy se migran automáticamente con el script de migración
+    
     return () => {
       unsubscribeTransactions();
       unsubscribeIncome();
       unsubscribeExpenses();
-      unsubscribeDebts();
     };
   };
 
