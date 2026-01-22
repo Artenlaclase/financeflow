@@ -128,95 +128,19 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       // En caso de error, mantener datos existentes
     });
 
-    // Obtener ingresos (mantener para compatibilidad con datos existentes)
-    const incomeQuery = query(
-      collection(db, 'users', user.uid, 'income'),
-      orderBy('date', 'desc'),
-      limit(10)
-    );
-    const unsubscribeIncome = onSnapshot(incomeQuery, (snapshot) => {
-      const legacyIncomeTotal = Math.round(snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0));
-      
-      // Crear array de transacciones de ingresos legacy
-      const incomeTransactions = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          type: 'income' as const,
-          amount: data.amount || 0,
-          description: data.description || '',
-          category: data.category || '',
-          date: data.date
-        };
-      });
-      
-      console.log('Legacy income transactions loaded:', incomeTransactions);
-      
-      // Solo actualizar si hay transacciones legacy
-      if (incomeTransactions.length > 0) {
-        setIncome(prev => prev + legacyIncomeTotal);
-        setRecentTransactions(prev => {
-          const combined = [...prev, ...incomeTransactions];
-          return combined
-            .sort((a, b) => {
-              const dateA = safeDate(a.date) || new Date(0);
-              const dateB = safeDate(b.date) || new Date(0);
-              return dateB.getTime() - dateA.getTime();
-            });
-        });
-      }
-    }, (error) => {
-      console.log('Legacy income query error (expected if no legacy data):', error);
-    });
+    // ✅ TODOS LOS DATOS AHORA VIENEN DE transactions/
+    // Ya no necesitamos listeners separados para incomes/expenses/debts
+    // La migración se ejecuta una vez desde el componente MigrationTool
 
-    // Obtener gastos (mantener para compatibilidad con datos existentes)
-    const expensesQuery = query(
-      collection(db, 'users', user.uid, 'expenses'),
-      orderBy('date', 'desc'),
-      limit(10)
-    );
-    const unsubscribeExpenses = onSnapshot(expensesQuery, (snapshot) => {
-      const legacyExpensesTotal = Math.round(snapshot.docs.reduce((sum, doc) => sum + doc.data().amount, 0));
-      
-      // Crear array de transacciones de gastos legacy
-      const expenseTransactions = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          type: 'expense' as const,
-          amount: data.amount || 0,
-          description: data.description || '',
-          category: data.category || '',
-          date: data.date
-        };
-      });
-      
-      console.log('Legacy expense transactions loaded:', expenseTransactions);
-      
-      // Solo actualizar si hay transacciones legacy
-      if (expenseTransactions.length > 0) {
-        setExpenses(prev => prev + legacyExpensesTotal);
-        setRecentTransactions(prev => {
-          const combined = [...prev, ...expenseTransactions];
-          return combined
-            .sort((a, b) => {
-              const dateA = safeDate(a.date) || new Date(0);
-              const dateB = safeDate(b.date) || new Date(0);
-              return dateB.getTime() - dateA.getTime();
-            });
-        });
-      }
-    }, (error) => {
-      console.log('Legacy expenses query error (expected if no legacy data):', error);
-    });
 
-    // LISTENERS LEGACY REMOVIDOS - Ahora deudas vienen de transactions/
-    // Los datos legacy se migran automáticamente con el script de migración
+    // ✅ MIGRACIÓN COMPLETADA
+    // Listeners legacy removidos - todos los datos vienen de transactions/
+    // La migración de datos legacy se ejecuta una vez desde el dashboard
+    
+    console.log('✅ All listeners configured from unified transactions/ collection');
     
     return () => {
       unsubscribeTransactions();
-      unsubscribeIncome();
-      unsubscribeExpenses();
     };
   };
 
