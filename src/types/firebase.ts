@@ -1,4 +1,5 @@
-import { Timestamp, User as FirebaseUser } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
+import { User } from 'firebase/auth';
 
 /**
  * Tipo union para fechas que pueden venir de Firebase
@@ -9,7 +10,7 @@ export type FirebaseDate = Timestamp | Date | string | number | null;
 /**
  * Tipo para usuario de Firebase Auth
  */
-export type FirebaseAuthUser = FirebaseUser | null;
+export type FirebaseAuthUser = User | null;
 
 /**
  * Tipo para metadatos de creación/actualización

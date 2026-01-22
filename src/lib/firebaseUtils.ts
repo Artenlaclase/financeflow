@@ -2,7 +2,6 @@
 
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase/config';
-import { FirebaseDate } from '@/types/firebase';
 
 export interface Transaction {
   id: string;
@@ -10,7 +9,7 @@ export interface Transaction {
   amount: number;
   description?: string;
   category?: string;
-  date: FirebaseDate;
+  date: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
   paymentMethod?: 'efectivo' | 'debito' | 'credito';
   installments?: number;
   merchant?: string;

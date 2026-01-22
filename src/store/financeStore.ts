@@ -5,7 +5,6 @@ import { persist, devtools } from 'zustand/middleware';
 import { getDocs, collection, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger';
-import { FirebaseDate } from '@/types/firebase';
 
 export interface Transaction {
   id: string;
@@ -13,9 +12,9 @@ export interface Transaction {
   type: 'income' | 'expense' | 'compra';
   amount: number;
   category: string;
-  date: FirebaseDate;
+  date: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
   description?: string;
-  createdAt?: FirebaseDate;
+  createdAt?: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
 }
 
 export interface FinanceState {

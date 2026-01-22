@@ -1,5 +1,4 @@
 // Tipos compartidos para el módulo de compras de supermercado
-import { FirebaseDate } from './firebase';
 
 export interface ProductoCompra {
   id?: string;
@@ -37,9 +36,9 @@ export interface CompraTransaction {
   id: string;
   amount: number;
   description: string;
-  date: FirebaseDate;
+  date: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
   detalleCompra: CompraDetalle;
-  createdAt: FirebaseDate;
+  createdAt: any; // TODO: Usar FirebaseDate cuando se refactorice el código que usa .toDate()
 }
 
 export interface ProductoHistorial {
