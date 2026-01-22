@@ -5,6 +5,7 @@ import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/f
 import { db } from '../lib/firebase/config';
 import { safeDate } from '../lib/dateUtils';
 import { useAuth } from './AuthContext';
+import { FirebaseDate } from '@/types/firebase';
 
 export interface Transaction {
   id: string;
@@ -12,7 +13,7 @@ export interface Transaction {
   amount: number;
   description?: string;
   category?: string;
-  date: any;
+  date: FirebaseDate;
 }
 
 interface FinanceContextProps {

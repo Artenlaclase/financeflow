@@ -5,6 +5,7 @@ import { persist, devtools } from 'zustand/middleware';
 import { getDocs, collection, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger';
+import { FirebaseDate } from '@/types/firebase';
 
 export interface Transaction {
   id: string;
@@ -12,9 +13,9 @@ export interface Transaction {
   type: 'income' | 'expense' | 'compra';
   amount: number;
   category: string;
-  date: any;
+  date: FirebaseDate;
   description?: string;
-  createdAt?: any;
+  createdAt?: FirebaseDate;
 }
 
 export interface FinanceState {

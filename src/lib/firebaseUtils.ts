@@ -2,6 +2,7 @@
 
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase/config';
+import { FirebaseDate } from '@/types/firebase';
 
 export interface Transaction {
   id: string;
@@ -9,7 +10,7 @@ export interface Transaction {
   amount: number;
   description?: string;
   category?: string;
-  date: any;
+  date: FirebaseDate;
   paymentMethod?: 'efectivo' | 'debito' | 'credito';
   installments?: number;
   merchant?: string;

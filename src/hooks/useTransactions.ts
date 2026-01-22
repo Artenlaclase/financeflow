@@ -5,6 +5,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { logger } from '@/lib/logger';
+import { FirebaseDate } from '@/types/firebase';
 
 export interface Transaction {
   id: string;
@@ -12,7 +13,7 @@ export interface Transaction {
   type: 'income' | 'expense' | 'compra';
   amount: number;
   category: string;
-  date: any; // Firebase Timestamp o Date
+  date: FirebaseDate;
   description?: string;
 }
 
